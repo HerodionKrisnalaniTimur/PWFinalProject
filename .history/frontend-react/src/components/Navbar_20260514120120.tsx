@@ -27,10 +27,10 @@ export default function Navbar() {
         {/* Desktop Menu */}
         <div className="hidden lg:flex items-center gap-6 text-sm font-medium text-zinc-700">
           <button className="flex items-center gap-1 hover:text-black">
-            Explore
+            Explore <ChevronDown size={16} />
           </button>
           <button className="flex items-center gap-1 hover:text-black">
-            Learn
+            Learn <ChevronDown size={16} />
           </button>
           <button className="flex items-center gap-1 hover:text-black">
             Build
