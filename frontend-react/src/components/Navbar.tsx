@@ -1,9 +1,11 @@
 import { ChevronDown, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from 'react-router-dom';
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   // lock scroll saat menu kebuka
   useEffect(() => {
@@ -39,9 +41,12 @@ export default function Navbar() {
 
         {/* Right */}
         <div className="flex items-center gap-2 sm:gap-4">
-          <button className="hidden sm:block bg-blue-600 text-white px-4 py-2 rounded-xl text-sm">
-            Join Testnet
-          </button>
+        <button 
+          onClick={() => navigate('/swap')}
+          className="hidden sm:block bg-blue-600 text-white px-4 py-2 rounded-xl text-sm"
+        >
+          Join Testnet
+        </button>
 
           {/* Hamburger */}
           <button
@@ -93,6 +98,7 @@ export default function Navbar() {
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
+                onClick={() => navigate('/swap')}
                 className="mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl text-base"
               >
                 Join Testnet

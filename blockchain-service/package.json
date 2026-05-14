@@ -1,6 +1,7 @@
 {
   "name": "blockchain-service",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -9,10 +10,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "ethers": "^6.16.0",
-    "express": "^5.2.1"
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.2"
   }
 }
