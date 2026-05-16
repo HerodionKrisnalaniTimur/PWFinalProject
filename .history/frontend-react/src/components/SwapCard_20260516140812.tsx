@@ -1,5 +1,5 @@
 import Sidebar from "../../components/SideBar";
-import SwapCard from "../../components/SwapCard";
+import SwapCard from "/components/SwapCard";
 import SkeletonCard from "../../components/SkeletonCard";
 import PageTransition from "../../components/PageTransition";
 

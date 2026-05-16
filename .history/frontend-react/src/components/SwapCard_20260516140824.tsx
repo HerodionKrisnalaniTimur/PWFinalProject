@@ -1,7 +1,7 @@
-import Sidebar from "../../components/SideBar";
-import SwapCard from "../../components/SwapCard";
-import SkeletonCard from "../../components/SkeletonCard";
-import PageTransition from "../../components/PageTransition";
+import Sidebar from "/components/SideBar";
+import SwapCard from "/components/SwapCard";
+import SkeletonCard from "/components/SkeletonCard";
+import PageTransition from "/components/PageTransition";
 
 import { Wallet } from "lucide-react";
 import { motion } from "framer-motion";

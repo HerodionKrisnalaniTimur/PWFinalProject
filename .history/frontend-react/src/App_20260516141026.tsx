@@ -8,7 +8,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import SwapPage from './pages/Pages_Testnet/SwapPages';
 import PoolPage from './pages/Pages_Testnet/PoolPages';
 import PointsPage from './pages/Pages_Testnet/PointPages';
-import { AnimatePresence } from 'framer-motion';
+im
 
 // Kita buat komponen LandingPage agar App.tsx tidak terlalu penuh
 const LandingPage = () => (
@@ -42,9 +42,9 @@ const LandingPage = () => (
 
 function App() {
   return (
-    <Router><AnimatePresence mode="wait">
+    <Router>
       <Routes>
-            
+            <AnimatePresence mode="wait">
         {/* Path "/" akan menampilkan seluruh komponen Landing Page */}
         <Route path="/" element={<LandingPage />} /> 
         
@@ -52,8 +52,8 @@ function App() {
         <Route path="/swap" element={<SwapPage />} />
         <Route path="/pool" element={<PoolPage />} />
         <Route path="/points" element={<PointsPage />} />
-        
-      </Routes></AnimatePresence>
+        </AnimatePresence>
+      </Routes>
     </Router>
   );
 }

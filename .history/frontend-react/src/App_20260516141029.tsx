@@ -42,9 +42,9 @@ const LandingPage = () => (
 
 function App() {
   return (
-    <Router><AnimatePresence mode="wait">
+    <Router>
       <Routes>
-            
+            <AnimatePresence mode="wait">
         {/* Path "/" akan menampilkan seluruh komponen Landing Page */}
         <Route path="/" element={<LandingPage />} /> 
         
@@ -52,8 +52,8 @@ function App() {
         <Route path="/swap" element={<SwapPage />} />
         <Route path="/pool" element={<PoolPage />} />
         <Route path="/points" element={<PointsPage />} />
-        
-      </Routes></AnimatePresence>
+        </AnimatePresence>
+      </Routes>
     </Router>
   );
 }

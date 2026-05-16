@@ -52,8 +52,8 @@ function App() {
         <Route path="/swap" element={<SwapPage />} />
         <Route path="/pool" element={<PoolPage />} />
         <Route path="/points" element={<PointsPage />} />
-        
-      </Routes></AnimatePresence>
+        </AnimatePresence>
+      </Routes>
     </Router>
   );
 }
