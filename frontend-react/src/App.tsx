@@ -6,6 +6,8 @@ import Blog from './pages/Blog';
 import Footer from './pages/Footer';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import SwapPage from './pages/Pages_Testnet/SwapPages';
+import PoolPage from './pages/Pages_Testnet/PoolPages';
+import PointsPage from './pages/Pages_Testnet/PointPages';
 
 // Kita buat komponen LandingPage agar App.tsx tidak terlalu penuh
 const LandingPage = () => (
@@ -44,6 +46,8 @@ function App() {
         
         {/* Path "/swap" akan menampilkan halaman FaroSwap */}
         <Route path="/swap" element={<SwapPage />} />
+        <Route path="/pool" element={<PoolPage />} />
+        <Route path="/points" element={<PointsPage />} />
       </Routes>
     </Router>
   );
