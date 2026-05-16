@@ -22,28 +22,11 @@ const Sidebar = () => {
       )}
 
       {/* Sidebar Container */}
-      <aside
-        className={`
-          fixed left-0 top-0 h-screen bg-[#EFEFEF]/80 backdrop-blur-md
-          border-r border-white/50 flex flex-col z-40
-          transition-all duration-300 shadow-sm
-
-          ${isOpen
-            ? `
-              w-[280px]
-              translate-x-0
-              p-6 sm:p-8
-              opacity-100
-              rounded-r-3xl
-            `
-            : `
-              w-0
-              -translate-x-full
-              p-0
-              opacity-0
-              overflow-hidden
-              border-none
-            `
+      <aside 
+        className={`sticky top-4 h-[calc(100vh-2rem)] bg-[#EFEFEF]/80 backdrop-blur-md border-r border-white/50 flex flex-col z-40 transition-all duration-300 shadow-sm
+          ${isOpen 
+            ? 'w-72 translate-x-0 ml-4 p-8 rounded-3xl opacity-100' 
+            : 'w-0 -translate-x-full m-0 p-0 opacity-0 overflow-hidden border-none' // Hilang saat tertutup
           }
         `}
       >

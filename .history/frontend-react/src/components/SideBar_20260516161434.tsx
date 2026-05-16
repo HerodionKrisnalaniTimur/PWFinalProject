@@ -23,30 +23,30 @@ const Sidebar = () => {
 
       {/* Sidebar Container */}
       <aside
-        className={`
-          fixed left-0 top-0 h-screen bg-[#EFEFEF]/80 backdrop-blur-md
-          border-r border-white/50 flex flex-col z-40
-          transition-all duration-300 shadow-sm
+  className={`
+    fixed left-0 top-0 h-screen bg-[#EFEFEF]/80 backdrop-blur-md
+    border-r border-white/50 flex flex-col z-40
+    transition-all duration-300 shadow-sm
 
-          ${isOpen
-            ? `
-              w-[280px]
-              translate-x-0
-              p-6 sm:p-8
-              opacity-100
-              rounded-r-3xl
-            `
-            : `
-              w-0
-              -translate-x-full
-              p-0
-              opacity-0
-              overflow-hidden
-              border-none
-            `
-          }
-        `}
-      >
+    ${isOpen
+      ? `
+        w-[280px]
+        translate-x-0
+        p-6 sm:p-8
+        opacity-100
+        rounded-r-3xl
+      `
+      : `
+        w-0
+        -translate-x-full
+        p-0
+        opacity-0
+        overflow-hidden
+        border-none
+      `
+    }
+  `}
+>
         <div className="flex items-center justify-between mb-12">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center text-white font-bold italic shadow-lg shadow-blue-200">F</div>
