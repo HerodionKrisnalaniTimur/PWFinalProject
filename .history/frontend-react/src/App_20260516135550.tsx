@@ -8,6 +8,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import SwapPage from './pages/Pages_Testnet/SwapPages';
 import PoolPage from './pages/Pages_Testnet/PoolPages';
 import PointsPage from './pages/Pages_Testnet/PointPages';
+import { main } from 'framer-motion/client';
 
 // Kita buat komponen LandingPage agar App.tsx tidak terlalu penuh
 const LandingPage = () => (
@@ -36,7 +37,6 @@ const LandingPage = () => (
     </section>
     <Footer />
   </div>
-  </main>
 );
 
 function App() {

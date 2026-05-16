@@ -8,16 +8,17 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import SwapPage from './pages/Pages_Testnet/SwapPages';
 import PoolPage from './pages/Pages_Testnet/PoolPages';
 import PointsPage from './pages/Pages_Testnet/PointPages';
+import { main } from 'framer-motion/client';
 
 // Kita buat komponen LandingPage agar App.tsx tidak terlalu penuh
 const LandingPage = () => (
-  <main>
-    <div className="bg-zinc-100">
-      <section className="relative overflow-hidden">
-        {/* Background Grid */}
-        <div className="absolute inset-0 flex justify-center items-start">
-          <div className="grid-bg"></div>
-        </div>
+  main
+  <div className="bg-zinc-100">
+    <section className="relative overflow-hidden">
+      {/* Background Grid */}
+      <div className="absolute inset-0 flex justify-center items-start">
+        <div className="grid-bg"></div>
+      </div>
 
       {/* Content Above Grid */}
       <div className="relative z-10">
@@ -36,7 +37,6 @@ const LandingPage = () => (
     </section>
     <Footer />
   </div>
-  </main>
 );
 
 function App() {
