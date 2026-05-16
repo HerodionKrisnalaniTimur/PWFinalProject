@@ -5,16 +5,24 @@ export default function TransferForm() {
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
 
-const submit = async () => {
-  const res = await transferToken({ to, amount });
-
-  alert("Success");
-
-  loadBalance(); // refresh saldo
-};
+  const submit = async (e) => {
+    e.preventDefault(); // Mencegah halaman web me-refresh saat tombol ditekan
+    
+    try {
+      const res = await transferToken({ to, amount });
+      alert("Success");
+      
+      // Catatan: Jika ingin menggunakan loadBalance(), pastikan ia 
+      // dikirim sebagai props dari komponen induk (parent)
+      // loadBalance(); 
+    } catch (error) {
+      console.error(error);
+      alert("Gagal melakukan transfer");
+    }
+  };
 
   return (
-    <div>
+    <form onSubmit={submit}>
       <h2>Transfer Token</h2>
 
       <input
@@ -29,7 +37,8 @@ const submit = async () => {
         onChange={(e) => setAmount(e.target.value)}
       />
 
-      <button onClick={submit}>Kirim</button>
-    </div>
+      {/* Mengubah tombol biasa menjadi tombol tipe submit */}
+      <button type="submit">Kirim</button>
+    </form>
   );
 }
