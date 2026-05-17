@@ -1,8 +1,19 @@
 import { useState } from 'react';
 import { Settings, ArrowDown } from 'lucide-react';
 
+const AVAILABLE_TOKENS = ["ZTX", "USDT", "USDC"];
+
 const SwapCard = () => {
   const [amount, setAmount] = useState("");
+  const [tokenIn, setTokenIn] = useState("WPROS");
+  const [tokenOut, setTokenOut] = useState("USDC");
+
+  // Fungsi untuk memutarbalikkan koin saat ikon tengah diklik
+  const handleSwitch = () => {
+    const temp = tokenIn;
+    setTokenIn(tokenOut);
+    setTokenOut(temp);
+  };
 
   return (
     <div className="w-full max-w-[500px] bg-[#EFEFEF]/90 backdrop-blur-xl p-8 rounded-[40px] shadow-2xl border border-white/50">
@@ -14,9 +25,21 @@ const SwapCard = () => {
       {/* Input Token 1 */}
       <div className="bg-white/60 p-6 rounded-3xl border border-white shadow-inner mb-2">
         <div className="flex justify-between items-center mb-4 text-sm font-bold">
-          <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm border">
-            <div className="w-5 h-5 bg-blue-700 rounded-full text-white text-[10px] flex items-center justify-center">P</div>
-            WPROS <span className="text-[8px] mt-1 text-gray-400">▼</span>
+          <div className="relative flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm border">
+            <div className="w-5 h-5 bg-blue-700 rounded-full text-white text-[10px] flex items-center justify-center shrink-0">P</div>
+            
+            {/* Dropdown Koin 1 */}
+            <select 
+              value={tokenIn}
+              onChange={(e) => setTokenIn(e.target.value)}
+              className="appearance-none bg-transparent outline-none font-bold cursor-pointer pr-4 z-10"
+            >
+              {AVAILABLE_TOKENS.map(token => (
+                <option key={`in-${token}`} value={token}>{token}</option>
+              ))}
+            </select>
+            <span className="text-[8px] text-gray-400 absolute right-3 pointer-events-none">▼</span>
+            
           </div>
           <span className="text-gray-400 font-medium">Balance: 0</span>
         </div>
@@ -32,7 +55,10 @@ const SwapCard = () => {
 
       {/* Switch Icon */}
       <div className="flex justify-center -my-6 relative z-20">
-        <div className="bg-white p-3 rounded-2xl shadow-lg border border-gray-100">
+        <div 
+          onClick={handleSwitch}
+          className="bg-white p-3 rounded-2xl shadow-lg border border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors"
+        >
           <ArrowDown size={18} className="text-gray-400" />
         </div>
       </div>
@@ -40,9 +66,21 @@ const SwapCard = () => {
       {/* Input Token 2 */}
       <div className="bg-white/60 p-6 rounded-3xl border border-white shadow-inner mt-2 mb-8">
         <div className="flex justify-between items-center mb-4 text-sm font-bold">
-          <div className="flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm border">
-            <div className="w-5 h-5 bg-blue-400 rounded-full text-white text-[10px] flex items-center justify-center font-serif">$</div>
-            USDC <span className="text-[8px] mt-1 text-gray-400">▼</span>
+          <div className="relative flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm border">
+            <div className="w-5 h-5 bg-blue-400 rounded-full text-white text-[10px] flex items-center justify-center font-serif shrink-0">$</div>
+            
+            {/* Dropdown Koin 2 */}
+            <select 
+              value={tokenOut}
+              onChange={(e) => setTokenOut(e.target.value)}
+              className="appearance-none bg-transparent outline-none font-bold cursor-pointer pr-4 z-10"
+            >
+              {AVAILABLE_TOKENS.map(token => (
+                <option key={`out-${token}`} value={token}>{token}</option>
+              ))}
+            </select>
+            <span className="text-[8px] text-gray-400 absolute right-3 pointer-events-none">▼</span>
+            
           </div>
           <span className="text-gray-400 font-medium">Balance: 0</span>
         </div>

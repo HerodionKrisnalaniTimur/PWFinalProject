@@ -1,70 +1,101 @@
-import Sidebar from "../../components/SideBar";
+import React, { useEffect, useState } from "react";
+import SideBar from "../../components/SideBar";
 import SwapCard from "../../components/SwapCard";
 import SkeletonCard from "../../components/SkeletonCard";
 import PageTransition from "../../components/PageTransition";
 
 import { Wallet } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
 
-const SwapPage = () => {
-  const [loading, setLoading] = useState(true);
+// Mendeklarasikan window.ethereum agar TypeScript tidak error
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
 
+const SwapPages: React.FC = () => {
+  const [loading, setLoading] = useState<boolean>(true);
+  const [walletAddress, setWalletAddress] = useState<string>("");
+
+  // Simulasi loading
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
     }, 2200);
-
     return () => clearTimeout(timer);
   }, []);
+
+  // Mengecek apakah wallet sudah terhubung sebelumnya
+  useEffect(() => {
+    const checkConnection = async () => {
+      if (typeof window !== "undefined" && window.ethereum) {
+        try {
+          const accounts: string[] = await window.ethereum.request({ 
+            method: "eth_accounts" 
+          });
+          if (accounts.length > 0) {
+            setWalletAddress(accounts[0]);
+          }
+        } catch (error) {
+          console.error("Gagal mengecek koneksi:", error);
+        }
+      }
+    };
+    checkConnection();
+  }, []);
+
+  // Fungsi untuk memanggil popup MetaMask
+  const connectWallet = async () => {
+    if (typeof window !== "undefined" && window.ethereum) {
+      try {
+        const accounts: string[] = await window.ethereum.request({
+          method: "eth_requestAccounts",
+        });
+        setWalletAddress(accounts[0]);
+      } catch (error) {
+        console.error("User menolak koneksi wallet", error);
+      }
+    } else {
+      alert("Silakan install ekstensi MetaMask terlebih dahulu!");
+    }
+  };
+
+  // Fungsi untuk menyingkat address (misal: 0x12...abcd)
+  const formatAddress = (address: string): string => {
+    if (!address) return "";
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
 
   return (
     <PageTransition>
       <div className="min-h-screen bg-[#F8F9FA] flex text-[#1A1A1A] font-sans relative overflow-hidden">
-
         {/* Animated Background */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           <div
             className="absolute inset-0 opacity-40"
             style={{
-              backgroundImage:
-                "radial-gradient(#D1D5DB 1px, transparent 1px)",
+              backgroundImage: "radial-gradient(#D1D5DB 1px, transparent 1px)",
               backgroundSize: "30px 30px",
             }}
           />
-
           <motion.div
-            animate={{
-              x: [0, 40, 0],
-              y: [0, -30, 0],
-            }}
-            transition={{
-              duration: 12,
-              repeat: Infinity,
-            }}
+            animate={{ x: [0, 40, 0], y: [0, -30, 0] }}
+            transition={{ duration: 12, repeat: Infinity }}
             className="absolute top-20 left-10 w-72 h-72 bg-blue-300/30 rounded-full blur-3xl"
           />
-
           <motion.div
-            animate={{
-              x: [0, -30, 0],
-              y: [0, 40, 0],
-            }}
-            transition={{
-              duration: 10,
-              repeat: Infinity,
-            }}
+            animate={{ x: [0, -30, 0], y: [0, 40, 0] }}
+            transition={{ duration: 10, repeat: Infinity }}
             className="absolute bottom-10 right-10 w-72 h-72 bg-cyan-300/30 rounded-full blur-3xl"
           />
         </div>
 
-        <Sidebar />
+        <SideBar />
 
         <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative overflow-y-auto custom-scrollbar">
-
           {/* Header */}
           <header className="flex flex-col sm:flex-row justify-between sm:justify-end gap-3 mb-8">
-
             <motion.button
               whileHover={{ scale: 1.05 }}
               className="bg-white/70 backdrop-blur-lg px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md"
@@ -75,12 +106,14 @@ const SwapPage = () => {
               Pharos
             </motion.button>
 
+            {/* BUTTON CONNECT WALLET */}
             <motion.button
+              onClick={connectWallet}
               whileHover={{ scale: 1.05 }}
-              className="bg-white/70 backdrop-blur-lg px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md"
+              className="bg-white/70 backdrop-blur-lg px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md cursor-pointer hover:bg-white transition-colors"
             >
               <Wallet size={16} />
-              0xDE34...35ff
+              {walletAddress ? formatAddress(walletAddress) : "Connect Wallet"}
             </motion.button>
           </header>
 
@@ -103,7 +136,6 @@ const SwapPage = () => {
             <h3 className="text-lg sm:text-xl font-bold text-gray-700 mb-4">
               Order History
             </h3>
-
             <div className="h-40 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center text-gray-400 font-medium bg-white/50">
               No transactions found
             </div>
@@ -114,4 +146,4 @@ const SwapPage = () => {
   );
 };
 
-export default SwapPage;
+export default SwapPages;
