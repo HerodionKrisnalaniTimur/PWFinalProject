@@ -24,12 +24,12 @@ export default function Home() {
             {/* Badge */}
             <div className="inline-flex items-center gap-2 bg-black text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm mb-6 sm:mb-8">
               <div className="w-2 h-2 bg-white rounded-full"></div>
-              RealFi, Accessible to All.
+              RealFi, GameFi, Build Community.
             </div>
 
             {/* Heading */}
             <h1 className="font-light leading-tight tracking-tight text-zinc-900 max-w-2xl text-[clamp(1.5rem,4vw,3.5rem)]">
-              Inclusive Financial Layer 2 for Real Value and Institutional-Grade Assets
+              Connects decentralized finance with local game developers to exchange ZTX and in-game values instantly.
             </h1>
 
             {/* Button */}

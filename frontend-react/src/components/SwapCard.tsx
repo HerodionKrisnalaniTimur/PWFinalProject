@@ -26,7 +26,7 @@ const SwapCard = () => {
       <div className="bg-white/60 p-6 rounded-3xl border border-white shadow-inner mb-2">
         <div className="flex justify-between items-center mb-4 text-sm font-bold">
           <div className="relative flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm border">
-            <div className="w-5 h-5 bg-blue-700 rounded-full text-white text-[10px] flex items-center justify-center shrink-0">P</div>
+            <div className="w-5 h-5 bg-blue-700 rounded-full text-white text-[10px] flex items-center justify-center shrink-0">Z</div>
             
             {/* Dropdown Koin 1 */}
             <select 
@@ -98,7 +98,7 @@ const SwapCard = () => {
       </div>
 
       <button className="w-full bg-[#3366FF] hover:bg-blue-700 text-white py-5 rounded-[24px] font-bold text-lg shadow-lg shadow-blue-200 transition-all active:scale-[0.98]">
-        Switch to Pharos
+        Switch Now
       </button>
     </div>
   );

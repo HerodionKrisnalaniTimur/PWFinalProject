@@ -141,7 +141,7 @@ export default function BlogAppleCarousel() {
       {/* HEADER */}
       <div className="max-w-6xl mx-auto flex justify-between items-center mb-12 px-4">
         <h2 className="text-2xl md:text-3xl font-bold text-white">
-          Real Finance. Real Participation
+          Real Community. Real Participation
         </h2>
 
         <div className="flex gap-3">

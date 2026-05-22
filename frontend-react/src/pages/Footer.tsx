@@ -47,7 +47,7 @@ export default function Footer() {
 
           {/* Logo */}
           <h2 className="text-2xl font-bold tracking-wide">
-            PHAROS
+            ZENTRIX COMPANY
           </h2>
 
           {/* Social */}
@@ -81,7 +81,7 @@ export default function Footer() {
 
           {/* Copyright */}
           <p className="text-sm text-zinc-500">
-            © 2026 Pharos. All Rights Reserved.
+            © 2026 Zentrix. All Rights Reserved.
           </p>
         </div>
 

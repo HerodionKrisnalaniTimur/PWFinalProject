@@ -49,8 +49,8 @@ const Sidebar = () => {
       >
         <div className="flex items-center justify-between mb-12">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center text-white font-bold italic shadow-lg shadow-blue-200">F</div>
-            <h1 className="text-2xl font-bold tracking-tight whitespace-nowrap">FaroSwap</h1>
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center text-white font-bold italic shadow-lg shadow-blue-200">Z</div>
+            <h1 className="text-2xl font-bold tracking-tight whitespace-nowrap">Zentrix</h1>
           </div>
           
           {/* Tombol Hide (Tutup Sidebar) */}
@@ -127,7 +127,7 @@ const Sidebar = () => {
             <Disc size={18} className="hover:text-blue-500 cursor-pointer transition-colors" /> 
             <BookOpen size={18} className="hover:text-blue-500 cursor-pointer transition-colors" />
           </div>
-          <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold whitespace-nowrap">Powered by DODO DEXpert</p>
+          <p className="text-[10px] text-gray-400 tracking-widest font-bold whitespace-nowrap">Powered by ZENTRIX DEXpert</p>
         </div>
       </aside>
     </>
