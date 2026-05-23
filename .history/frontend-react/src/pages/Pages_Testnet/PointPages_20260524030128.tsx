@@ -116,7 +116,7 @@ const PointsPage = () => {
               Zentrix Points
             </motion.button>
 
-            <motion.button
+<motion.button
               onClick={connectWallet}
               whileHover={{ scale: 1.05 }}
               className="bg-white/70 backdrop-blur-lg px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md cursor-pointer hover:bg-white transition-colors"

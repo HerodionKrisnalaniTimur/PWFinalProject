@@ -133,6 +133,10 @@ export default function Navbar() {
             }}
           >
 
+            {/* Background Blur Circle */}
+
+            <div className="absolute bottom-10 right-10 w-72 h-72 bg-cyan-300/20 rounded-full blur-3xl"></div>
+
             {/* Close Button */}
             <button
               onClick={() => setOpen(false)}

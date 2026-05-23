@@ -12,49 +12,10 @@ import {
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
+
 
 const PoolPage = () => {
   const [loading, setLoading] = useState(true);
-  const [walletAddress, setWalletAddress] = useState<string>("");
-
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (typeof window !== "undefined" && window.ethereum) {
-        try {
-          const accounts: string[] = await window.ethereum.request({ 
-            method: "eth_accounts" 
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Gagal mengecek koneksi:", error);
-        }
-      }
-    };
-    checkConnection();
-  }, []);
-
-  // Fungsi untuk memanggil popup MetaMask
-  const connectWallet = async () => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        const accounts: string[] = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        setWalletAddress(accounts[0]);
-      } catch (error) {
-        console.error("User menolak koneksi wallet", error);
-      }
-    } else {
-      alert("Silakan install ekstensi MetaMask terlebih dahulu!");
-    }
-  };
 
   useEffect(() => {
     const timer = setTimeout(() => {

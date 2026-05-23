@@ -127,7 +127,7 @@ export default function BlogAppleCarousel() {
   const distance = (i: number) => Math.abs(i - index);
 
   return (
-    <section className="relative py-20 bg-gradient-to-b from-blue-700 via-blue-800 to-blue-900 overflow-hidden "id="blog">
+    <section className="relative py-20 bg-gradient-to-b from-blue-700 via-blue-800 to-blue-900 overflow-hidden ">
 
       {/* GRID */}
       <div className="absolute inset-0 opacity-[0.05] pointer-events-none 

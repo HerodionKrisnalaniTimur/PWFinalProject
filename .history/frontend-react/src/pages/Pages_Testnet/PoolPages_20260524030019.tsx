@@ -20,7 +20,7 @@ declare global {
 
 const PoolPage = () => {
   const [loading, setLoading] = useState(true);
-  const [walletAddress, setWalletAddress] = useState<string>("");
+    const [walletAddress, setWalletAddress] = useState<string>("");
 
   useEffect(() => {
     const checkConnection = async () => {

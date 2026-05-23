@@ -20,7 +20,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="relative bg-[#0e0f14] text-white px-4 sm:px-6 py-16 sm:py-20 overflow-hidden" id="footer">
+    <footer className="relative bg-[#0e0f14] text-white px-4 sm:px-6 py-16 sm:py-20 overflow-hidden" id>
 
       {/* BACKGROUND GLOW */}
       <div className="absolute inset-0 pointer-events-none z-0">

@@ -12,16 +12,6 @@ import {
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
-declare global {
-  interface Window {
-    ethereum?: any;
-  }
-}
-
-const PoolPage = () => {
-  const [loading, setLoading] = useState(true);
-  const [walletAddress, setWalletAddress] = useState<string>("");
-
   useEffect(() => {
     const checkConnection = async () => {
       if (typeof window !== "undefined" && window.ethereum) {
@@ -55,6 +45,9 @@ const PoolPage = () => {
       alert("Silakan install ekstensi MetaMask terlebih dahulu!");
     }
   };
+
+const PoolPage = () => {
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
