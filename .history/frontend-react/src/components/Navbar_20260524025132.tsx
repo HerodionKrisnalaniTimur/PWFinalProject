@@ -114,7 +114,7 @@ export default function Navbar() {
       <AnimatePresence>
         {open && (
           <motion.div
-            className="fixed inset-0 z-40 bg-white/100 backdrop-blur-2xl flex flex-col justify-center items-center px-6"
+            className="fixed inset-0 z-40 bg-white/20 backdrop-blur-2xl flex flex-col justify-center items-center px-6"
             initial={{
               y: "-100%",
               opacity: 0,
@@ -132,6 +132,10 @@ export default function Navbar() {
               ease: "easeInOut",
             }}
           >
+
+            {/* Background Blur Circle */}
+
+            <div className="absolute bottom-10 right-10 w-72 h-72 bg-cyan-300/20 rounded-full blur-3xl"></div>
 
             {/* Close Button */}
             <button

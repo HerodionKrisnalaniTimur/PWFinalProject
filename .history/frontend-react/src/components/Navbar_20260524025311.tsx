@@ -133,6 +133,10 @@ export default function Navbar() {
             }}
           >
 
+            {/* Background Blur Circle */}
+
+            <div className="absolute bottom-10 right-10 w-72 h-72 bg-cyan-300/20 rounded-full blur-3xl"></div>
+
             {/* Close Button */}
             <button
               onClick={() => setOpen(false)}
@@ -194,10 +198,7 @@ export default function Navbar() {
                 whileTap={{
                   scale: 0.95,
                 }}
-                onClick={() => {
-                  setOpen(false);
-                  navigate("/swap");
-                }}
+                onClick={() => navigate("/swap")}
                 className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-2xl text-base font-medium shadow-lg transition-all"
               >
                 Join Testnet

@@ -14,43 +14,9 @@ import { useEffect, useState } from "react";
 
 const PointsPage = () => {
   const [loading, setLoading] = useState(true);
-  const [walletAddress, setWalletAddress] = useState<string>("");
-
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (typeof window !== "undefined" && window.ethereum) {
-        try {
-          const accounts: string[] = await window.ethereum.request({ 
-            method: "eth_accounts" 
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Gagal mengecek koneksi:", error);
-        }
-      }
-    };
-    checkConnection();
-  }, []);
-
-  // Fungsi untuk memanggil popup MetaMask
-  const connectWallet = async () => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        const accounts: string[] = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        setWalletAddress(accounts[0]);
-      } catch (error) {
-        console.error("User menolak koneksi wallet", error);
-      }
-    } else {
-      alert("Silakan install ekstensi MetaMask terlebih dahulu!");
-    }
-  };
 
 
+  
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -117,12 +83,11 @@ const PointsPage = () => {
             </motion.button>
 
             <motion.button
-              onClick={connectWallet}
               whileHover={{ scale: 1.05 }}
-              className="bg-white/70 backdrop-blur-lg px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md cursor-pointer hover:bg-white transition-colors"
+              className="bg-white/70 backdrop-blur-xl px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md"
             >
               <Wallet size={16} />
-              {walletAddress ? formatAddress(walletAddress) : "Connect Wallet"}
+              0xDE34...35ff
             </motion.button>
           </header>
 
