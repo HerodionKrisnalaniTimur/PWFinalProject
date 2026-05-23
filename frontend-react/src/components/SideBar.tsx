@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutGrid, Droplets, Star, X, Send, Disc, BookOpen, Menu, ChevronLeft } from 'lucide-react';
+import { LayoutGrid, Droplets, Star, X, Send, Disc, BookOpen, Menu, ChevronLeft, RefreshCw } from 'lucide-react'; // Ditambahkan: RefreshCw
 import { Link, useLocation } from 'react-router-dom';
 
 const Sidebar = () => {
@@ -65,7 +65,6 @@ const Sidebar = () => {
 
         <nav className="flex flex-col gap-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
           {/* SWAP MENU */}
-          {/* Gunakan 'replace' agar tidak menumpuk history, mempermudah fungsi Go Back */}
           <Link 
             to="/swap" 
             replace
@@ -116,6 +115,24 @@ const Sidebar = () => {
             </div>
             <p className={`text-xs ml-8 whitespace-nowrap ${currentPath === '/points' ? 'text-gray-500' : ''}`}>
               Track loyalty points
+            </p>
+          </Link>
+
+          {/* CONVERS MENU (BARU) */}
+          <Link 
+            to="/convers" 
+            replace
+            className={`p-4 rounded-2xl flex flex-col gap-1 transition-all ${
+              currentPath === '/convers' 
+                ? 'bg-white shadow-sm border border-white' 
+                : 'text-gray-400 hover:text-gray-600 hover:bg-white/50'
+            }`}
+          >
+            <div className={`flex items-center gap-3 font-bold text-lg ${currentPath === '/convers' ? 'text-blue-600' : ''}`}>
+              <RefreshCw size={20} /> Convers
+            </div>
+            <p className={`text-xs ml-8 whitespace-nowrap ${currentPath === '/convers' ? 'text-gray-500' : ''}`}>
+              Digital & Crypto Conversion
             </p>
           </Link>
         </nav>
