@@ -15,23 +15,23 @@ type Item = {
 
 const data: Item[] = [
   {
-    title: "Instant Payments",
-    desc: "Cross-border settlements confirmed in under one second.",
+    title: "Agate International",
+    desc: "salah satu studio game terbesar di Indonesia, Agate telah melahirkan puluhan judul sukses seperti Valthirian Arc yang populer di kancah internasional. Mereka adalah pionir dalam membangun ekosistem developer profesional di tanah air.",
     image: img1,
   },
   {
-    title: "Compliant Finance",
-    desc: "Digital ID, zk-KYC, and programmable AML.",
+    title: "Toge Productions",
+    desc: "Terkenal lewat fenomena global Coffee Talk, studio ini tidak hanya menciptakan game, tetapi juga menjadi inkubator bagi developer indie lokal lainnya. Mereka sukses membawa narasi budaya lokal ke telinga pemain di seluruh dunia.",
     image: img2,
   },
   {
-    title: "Infrastructure Assets",
-    desc: "Real-world assets accessible at internet scale.",
+    title: "Digital Happiness",
+    desc: "Studio di balik seri DreadOut, game horor Indonesia pertama yang sukses besar di platform global. Mereka berhasil membuktikan bahwa mitologi dan hantu lokal bisa menjadi komoditas kreatif yang sangat diminati di pasar internasional.",
     image: img3,
   },
   {
-    title: "Stablecoins",
-    desc: "Stable assets backed by verified reserves.",
+    title: "Mojiken Studio",
+    desc: "game peraih penghargaan A Space for the Unbound. Dikenal karena gaya visual pixel art yang memukau dan cerita yang menyentuh hati, Mojiken membawa identitas visual khas Indonesia Timur ke level yang lebih tinggi.",
     image: img4,
   },
 ];

@@ -29,7 +29,7 @@ export default function Home() {
 
             {/* Heading */}
             <h1 className="font-light leading-tight tracking-tight text-zinc-900 max-w-2xl text-[clamp(1.5rem,4vw,3.5rem)]">
-              Connects decentralized finance with local game developers to exchange ZTX and in-game values instantly.
+              Connects decentralized finance with local game to game values instantly.
             </h1>
 
             {/* Button */}
@@ -50,7 +50,8 @@ export default function Home() {
             </div>
 
             {/* Description */}
-            <div className="mt-10 sm:mt-14 lg:mt-16 max-w-lg border-l-2 border-zinc-700 pl-4 sm:pl-6 text-sm sm:text-base text-zinc-700 leading-relaxed">
+            {/* Ditambahkan min-h-[4.5rem] atau min-h-[5rem] untuk mengunci tinggi ruang teks */}
+            <div className="mt-10 sm:mt-14 lg:mt-16 max-w-lg border-l-2 border-zinc-700 pl-4 sm:pl-6 text-sm sm:text-base text-zinc-700 leading-relaxed min-h-[5rem] sm:min-h-[4.5rem]">
               <TextType 
                 text={["Powered by modular architecture, deep-parallel execution, and built-in compliance, enabling real-time open finance onchain."]}
                 typingSpeed={75}
