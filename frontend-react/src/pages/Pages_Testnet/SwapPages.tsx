@@ -6,8 +6,8 @@ import PageTransition from "../../components/PageTransition";
 
 import { Wallet } from "lucide-react";
 import { motion } from "framer-motion";
+import { ethers } from "ethers"; // Pastikan ethers di-import di sini
 
-// Mendeklarasikan window.ethereum agar TypeScript tidak error
 declare global {
   interface Window {
     ethereum?: any;
@@ -18,7 +18,7 @@ const SwapPages: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
 
-  // Simulasi loading
+  // Simulasi loading komponen
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -26,42 +26,76 @@ const SwapPages: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Mengecek apakah wallet sudah terhubung sebelumnya
-  useEffect(() => {
-    const checkConnection = async () => {
-      if (typeof window !== "undefined" && window.ethereum) {
-        try {
-          const accounts: string[] = await window.ethereum.request({ 
-            method: "eth_accounts" 
-          });
-          if (accounts.length > 0) {
-            setWalletAddress(accounts[0]);
-          }
-        } catch (error) {
-          console.error("Gagal mengecek koneksi:", error);
-        }
+  // FUNGSI UNTUK SINKRONISASI ALAMAT METAMASK AKTIF
+  const syncWallet = async () => {
+    if (typeof window !== "undefined" && window.ethereum) {
+      try {
+        // Menggunakan BrowserProvider bawaan Ethers v6 yang sangat stabil di Vite
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const currentAddress = await signer.getAddress();
+        
+        // Simpan alamat asli MetaMask ke state React
+        setWalletAddress(currentAddress);
+        console.log("MetaMask Terkoneksi & Sinkron:", currentAddress);
+      } catch (error) {
+        // Jika user belum connect atau menolak konfirmasi
+        setWalletAddress("");
       }
-    };
-    checkConnection();
+    }
+  };
+
+  // DETEKSI OTOMATIS PERUBAHAN AKUN DAN REFRESH DI VITE
+  useEffect(() => {
+    // Jalankan sinkronisasi saat pertama kali halaman dibuka
+    syncWallet();
+
+    if (typeof window !== "undefined" && window.ethereum) {
+      // LISTENER: Jika user ganti akun langsung di MetaMask, jalankan fungsi sync ulang
+      const handleAccountsChanged = (accounts: string[]) => {
+        if (accounts.length > 0) {
+          syncWallet();
+        } else {
+          setWalletAddress("");
+        }
+      };
+
+      // LISTENER: Jika user ganti jaringan (network), reload halaman
+      const handleChainChanged = () => {
+        window.location.reload();
+      };
+
+      window.ethereum.on("accountsChanged", handleAccountsChanged);
+      window.ethereum.on("chainChanged", handleChainChanged);
+
+      // Bersihkan listener saat halaman ditutup/pindah page
+      return () => {
+        if (window.ethereum.removeListener) {
+          window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+          window.ethereum.removeListener("chainChanged", handleChainChanged);
+        }
+      };
+    }
   }, []);
 
-  // Fungsi untuk memanggil popup MetaMask
+  // FUNGSI TOMBOL CONNECT WALLET (MEMAKSA POPUP METAMASK KELUAR)
   const connectWallet = async () => {
     if (typeof window !== "undefined" && window.ethereum) {
       try {
-        const accounts: string[] = await window.ethereum.request({
+        // Memicu popup persetujuan MetaMask
+        await window.ethereum.request({
           method: "eth_requestAccounts",
         });
-        setWalletAddress(accounts[0]);
+        // Setelah disetujui, ambil alamatnya dengan fungsi sinkronisasi yang ada
+        await syncWallet();
       } catch (error) {
-        console.error("User menolak koneksi wallet", error);
+        console.error("User membatalkan koneksi wallet", error);
       }
     } else {
       alert("Silakan install ekstensi MetaMask terlebih dahulu!");
     }
   };
 
-  // Fungsi untuk menyingkat address (misal: 0x12...abcd)
   const formatAddress = (address: string): string => {
     if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
@@ -79,21 +113,11 @@ const SwapPages: React.FC = () => {
               backgroundSize: "30px 30px",
             }}
           />
-          <motion.div
-            animate={{ x: [0, 40, 0], y: [0, -30, 0] }}
-            transition={{ duration: 12, repeat: Infinity }}
-            className="absolute top-20 left-10 w-72 h-72 bg-blue-300/30 rounded-full blur-3xl"
-          />
-          <motion.div
-            animate={{ x: [0, -30, 0], y: [0, 40, 0] }}
-            transition={{ duration: 10, repeat: Infinity }}
-            className="absolute bottom-10 right-10 w-72 h-72 bg-cyan-300/30 rounded-full blur-3xl"
-          />
         </div>
 
         <SideBar />
 
-        <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative overflow-y-auto custom-scrollbar">
+        <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative overflow-y-auto">
           {/* Header */}
           <header className="flex flex-col sm:flex-row justify-between sm:justify-end gap-3 mb-8">
             <motion.button
@@ -123,22 +147,7 @@ const SwapPages: React.FC = () => {
             animate={{ opacity: 1 }}
             className="flex-1 flex flex-col items-center pt-2 sm:pt-6"
           >
-            {loading ? <SkeletonCard /> : <SwapCard />}
-          </motion.div>
-
-          {/* History */}
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="w-full max-w-6xl mx-auto mt-8 sm:mt-12 bg-white/60 backdrop-blur-xl rounded-3xl p-5 sm:p-8 border border-white shadow-lg"
-          >
-            <h3 className="text-lg sm:text-xl font-bold text-gray-700 mb-4">
-              Order History
-            </h3>
-            <div className="h-40 border-2 border-dashed border-gray-200 rounded-2xl flex items-center justify-center text-gray-400 font-medium bg-white/50">
-              No transactions found
-            </div>
+            {loading ? <SkeletonCard /> : <SwapCard walletAddress={walletAddress} connectWallet={connectWallet} />}
           </motion.div>
         </main>
       </div>
