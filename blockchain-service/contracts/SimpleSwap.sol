@@ -23,13 +23,11 @@ contract SimpleSwap {
     // Fungsi utama untuk menukar USDT menjadi ZTX
     function swapUsdtForZtx(uint256 amountUSDT) public {
         uint256 amountZTX = amountUSDT * rate;
+    require(tokenZTX.balanceOf(msg.sender) >= amountZTX, "Saldo ZTX tidak cukup");
 
-        require(tokenZTX.balanceOf(address(this)) >= amountZTX, "Contract tidak memiliki cukup ZTX");
-        
-        // Tarik USDT dari user ke contract
-        require(tokenUSDT.transferFrom(msg.sender, address(this), amountUSDT), "Transfer USDT gagal. Pastikan sudah Approve");
+    require(tokenUSDT.balanceOf(msg.sender) >= amountUSDT, "Saldo USDT tidak cukup");
         
         // Kirim ZTX dari contract ke user
-        require(tokenZTX.transfer(msg.sender, amountZTX), "Transfer ZTX gagal");
+    require(tokenZTX.transfer(msg.sender, amountZTX), "Transfer ZTX gagal");
     }
 }

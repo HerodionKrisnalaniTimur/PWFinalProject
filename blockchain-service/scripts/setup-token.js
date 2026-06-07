@@ -5,7 +5,7 @@ async function main() {
   console.log("=== MEMULAI AMUNISI TOKEN & LIKUIDITAS ===");
   console.log("Menggunakan akun:", deployer.address);
 
-  // Alamat hasil deploy Anda sebelumnya
+  // Alamat hasil deploy sebelumnya
   const ztxAddress = "0x398f1beF5cdCa19DF73954437ab54FD2d650b243";
   const usdtAddress = "0x5f056C66A3E2c50d16ACE53a8EBA3080C6D5C46B";
   const swapAddress = "0x502e5a583223e5020924332a05a18f324FdaE736";
@@ -17,10 +17,10 @@ async function main() {
   const jumlahZTX = hre.ethers.parseEther("1000"); // 1000 ZTX
   const jumlahUSDT = hre.ethers.parseEther("500");   // 500 USDT
 
-  // --- TUGAS 1: ISI SALDO ZTX KE WALLET ANDA ---
+  // --- TUGAS 1: ISI SALDO ZTX KE WALLET ---
   console.log("\n[Tugas 1] Mencetak 1000 ZTX ke dompet Anda...");
   try {
-    // Mencoba memanggil fungsi mint jika tipe ERC20 Anda mendukung minting publik/owner
+    // Mencoba memanggil fungsi mint jika tipe ERC20 mendukung minting publik/owner
     const txMint = await ZTX.mint(deployer.address, jumlahZTX);
     await txMint.wait();
     console.log("> Sukses! Saldo ZTX Anda di MetaMask kini bertambah.");
@@ -28,7 +28,7 @@ async function main() {
     console.log("> Fungsi mint gagal/tidak ada. Jika total supply sudah otomatis masuk ke dompet Anda saat deploy, abaikan pesan ini.");
   }
 
-  // --- TUGAS 2: KIRIM MODAL USDT KE KONTRAK SWAP ---
+  // --- TUGAS 2: KIRIM USDT KE KONTRAK SWAP ---
   console.log("\n[Tugas 2] Mengirim 500 USDT ke kontrak SimpleSwap...");
   try {
     const txTransfer = await USDT.transfer(swapAddress, jumlahUSDT);

@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Settings, ArrowDown } from 'lucide-react';
-import { ethers } from 'ethers'; // Pastikan ethers sudah ter-import
+import { ethers } from 'ethers';
 
 const AVAILABLE_TOKENS = ["ZTX", "USDT", "USDC"];
 
-// Tambahkan Interface Props agar bisa menerima data walletAddress dari SwapPages
 interface SwapCardProps {
   walletAddress?: string;
   connectWallet?: () => Promise<void>;
@@ -15,12 +14,31 @@ const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => 
   const [tokenIn, setTokenIn] = useState("ZTX");
   const [tokenOut, setTokenOut] = useState("USDT");
   const [isWrongNetwork, setIsWrongNetwork] = useState(false);
+  
+  // State untuk melacak rasio harga dinamis
+  const [exchangeRate, setExchangeRate] = useState<number>(1.5);
 
   const handleSwitch = () => {
     const temp = tokenIn;
     setTokenIn(tokenOut);
     setTokenOut(temp);
   };
+
+  // 1. SINKRONISASI DROPDOWN & HARGA OTOMATIS
+  useEffect(() => {
+    if (tokenIn === tokenOut) {
+      setExchangeRate(1);
+      return;
+    }
+    // Mengatur rasio harga secara dinamis berdasarkan koin yang dipilih user
+    if (tokenIn === "ZTX" && (tokenOut === "USDT" || tokenOut === "USDC")) {
+      setExchangeRate(1.5); // 1 ZTX = 1.5 USDT/USDC
+    } else if ((tokenIn === "USDT" || tokenIn === "USDC") && tokenOut === "ZTX") {
+      setExchangeRate(1 / 1.5); // 1 USDT = 0.66 ZTX
+    } else {
+      setExchangeRate(1); // USDT <-> USDC (1:1)
+    }
+  }, [tokenIn, tokenOut]);
 
   // VALIDASI JARINGAN SEPOLIA AKTIF
   useEffect(() => {
@@ -40,9 +58,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => 
     checkNetwork();
   }, [walletAddress]);
 
-  // FUNGSI UTAMA SWAP KE BLOCKCHAIN
-  const handleSwapExecution = async () => {
-    // Jika wallet belum terhubung, minta connect terlebih dahulu
+//Fitur utama untuk mengeksekusi proses swap dengan langkah-langkah yang jelas dan terstruktur
+const handleSwapExecution = async () => {
     if (!walletAddress) {
       if (connectWallet) await connectWallet();
       return;
@@ -54,39 +71,83 @@ const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => 
     }
 
     try {
-      // Inisialisasi Provider Ethers v6 dari MetaMask
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
-      // MEMASUKKAN ALAMAT KONTRAK HASIL DEPLOY ANDA
-      const CONTRACT_ADDRESS = "0x502e5a583223e5020924332a05a18f324FdaE736";
+      // DEFINISI ALAMAT KONTRAK SECARA TEGAS
+      const ADDR_SIMPLE_SWAP = "0x502e5a583223e5020924332a05a18f324FdaE736"; // Tempat Tukar Koin
+      const ADDR_TOKEN_ZTX  = "0x1a5654F13E8691EBba39EC99fd940e4C6632786e"; // Kontrak Koin ZTX
+
+      if (tokenIn !== "ZTX" || tokenOut !== "USDT") {
+        alert("Smart contract SimpleSwap saat ini dikonfigurasi khusus untuk pair ZTX ke USDT.");
+        return;
+      }
+
+      const amountInWei = ethers.parseEther(amount);
+
+      // =================================================================
+      // PROSES 1: PERSETUJUAN (APPROVE) TOKEN ZTX
+      // =================================================================
+      const erc20Abi = [
+        "function allowance(address owner, address spender) view returns (uint256)",
+        "function approve(address spender, uint256 amount) returns (bool)"
+      ];
       
-      // Sesuaikan ABI dengan nama fungsi swap di dalam SimpleSwap.sol Anda
-      const CONTRACT_ABI = [
+      const ztxContractInstance = new ethers.Contract(ADDR_TOKEN_ZTX, erc20Abi, signer);
+      
+      console.log("Memeriksa izin allowance token ZTX...");
+      let currentAllowance = BigInt(0);
+      try {
+        currentAllowance = await ztxContractInstance.allowance(walletAddress, ADDR_SIMPLE_SWAP);
+      } catch (e) {
+        console.log("Gagal membaca allowance, abaikan dan lanjut approve.");
+      }
+
+      if (currentAllowance < amountInWei) {
+   
+        
+        // Panggil fungsi approve langsung dari instance kontrak token ZTX
+        const txApprove = await ztxContractInstance.approve(
+          ADDR_SIMPLE_SWAP, 
+          ethers.parseEther("1000000"), // Beri izin limit besar agar tidak berulang
+          { gasLimit: 120000 }
+        );
+        
+        alert("Menunggu konfirmasi persetujuan dari blockchain Sepolia...");
+        await txApprove.wait();
+        alert("Persetujuan Berhasil! Lanjut ke Langkah 2...");
+      }
+
+      // =================================================================
+      // PROSES 2: TRANSAKSI SWAP UTAMA (MENGGUNAKAN INSTANCE KONTRAK SEPARASI)
+      // =================================================================
+      const swapAbi = [
         "function swapZtxForUsdt(uint256 amountIn) external returns (uint256)"
       ];
 
-      const swapContract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-      
-      // Konversi input angka biasa ke format Wei (18 desimal)
-      const amountInWei = ethers.parseEther(amount);
+      // Inisialisasi kontrak baru yang terpisah total agar aman
+      const swapContractInstance = new ethers.Contract(ADDR_SIMPLE_SWAP, swapAbi, signer);
 
-      console.log(`Mengirim perintah swap ke smart contract untuk ${amount} ZTX...`);
       
-      // Memicu jendela popup MetaMask keluar
-      const tx = await swapContract.swapZtxForUsdt(amountInWei);
-      alert("Transaksi berhasil dikirim ke Sepolia Network! Menunggu konfirmasi block...");
+
+      // Panggil fungsi swapZtxForUsdt dari instance kontrak SimpleSwap
+      const txSwap = await swapContractInstance.swapZtxForUsdt(amountInWei, {
+        gasLimit: 350000 
+      });
+
+      alert("Transaksi Swap terkirim! Menunggu konfirmasi block...");
+      await txSwap.wait();
       
-      // Tunggu hingga transaksi dikonfirmasi oleh validator blockchain
-      await tx.wait();
-      alert("Selamat! Proses Swap Berhasil Masuk ke Block.");
-      setAmount(""); // Reset form input
+      alert("🎉 Selamat! Proses Swap ZTX ke USDT Berhasil Sempurna.");
+      setAmount(""); // Reset input form
       
     } catch (error: any) {
       console.error("Detail Error Transaksi:", error);
-      alert("Transaksi gagal: " + (error.reason || error.message));
+      alert("Transaksi gagal: " + (error.reason || error.message || "Dibatalkan"));
     }
   };
+  // Menghitung hasil konversi otomatis secara real-time
+  const calculatedOutput = amount ? (parseFloat(amount) * exchangeRate) : 0;
 
   return (
     <div className="w-full max-w-[500px] bg-[#EFEFEF]/90 backdrop-blur-xl p-8 rounded-[40px] shadow-2xl border border-white/50">
@@ -95,11 +156,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => 
         <Settings size={20} className="text-gray-400" />
       </div>
 
-      {/* Input Token 1 */}
+      {/* Input Token 1 (Asal) */}
       <div className="bg-white/60 p-6 rounded-3xl border border-white shadow-inner mb-2">
         <div className="flex justify-between items-center mb-4 text-sm font-bold">
           <div className="relative flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm border">
-            <div className="w-5 h-5 bg-blue-700 rounded-full text-white text-[10px] flex items-center justify-center shrink-0">Z</div>
+            <div className="w-5 h-5 bg-blue-700 rounded-full text-white text-[10px] flex items-center justify-center shrink-0">
+              {tokenIn === "ZTX" ? "Z" : "$"}
+            </div>
             <select 
               value={tokenIn}
               onChange={(e) => setTokenIn(e.target.value)}
@@ -111,7 +174,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => 
             </select>
             <span className="text-[8px] text-gray-400 absolute right-3 pointer-events-none">▼</span>
           </div>
-          <span className="text-gray-400 font-medium">Balance: {walletAddress ? "100.00" : "0"}</span>
+          <span className="text-gray-400 font-medium">Balance: {walletAddress ? (tokenIn === "ZTX" ? "500.00" : "100.00") : "0"}</span>
         </div>
         <input 
           type="number" 
@@ -129,11 +192,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => 
         </div>
       </div>
 
-      {/* Input Token 2 */}
+      {/* Input Token 2 (Tujuan - Ter-sinkronisasi Otomatis) */}
       <div className="bg-white/60 p-6 rounded-3xl border border-white shadow-inner mt-2 mb-8">
         <div className="flex justify-between items-center mb-4 text-sm font-bold">
           <div className="relative flex items-center gap-2 bg-white px-3 py-1 rounded-full shadow-sm border">
-            <div className="w-5 h-5 bg-blue-400 rounded-full text-white text-[10px] flex items-center justify-center font-serif shrink-0">$</div>
+            <div className="w-5 h-5 bg-blue-400 rounded-full text-white text-[10px] flex items-center justify-center font-serif shrink-0">
+              {tokenOut === "ZTX" ? "Z" : "$"}
+            </div>
             <select 
               value={tokenOut}
               onChange={(e) => setTokenOut(e.target.value)}
@@ -145,10 +210,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => 
             </select>
             <span className="text-[8px] text-gray-400 absolute right-3 pointer-events-none">▼</span>
           </div>
-          <span className="text-gray-400 font-medium">Balance: 0</span>
+          <span className="text-gray-400 font-medium">Balance: {walletAddress ? (tokenOut === "USDT" ? "500.00" : "0.00") : "0"}</span>
         </div>
         <div className="text-4xl font-medium text-gray-800">
-          {amount ? (parseFloat(amount) * 1.5).toFixed(2) : "-"}
+          {amount ? calculatedOutput.toFixed(2) : "0.00"}
         </div>
       </div>
 
