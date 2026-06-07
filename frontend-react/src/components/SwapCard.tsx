@@ -14,7 +14,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => 
   const [tokenIn, setTokenIn] = useState("ZTX");
   const [tokenOut, setTokenOut] = useState("USDT");
   const [isWrongNetwork, setIsWrongNetwork] = useState(false);
-  
+  const [txStatus, setTxStatus] = useState<{ type: "idle" | "approving" | "swapping" | "success" | "error"; message: string }>({ type: "idle", message: "" });
+
   // State untuk melacak rasio harga dinamis
   const [exchangeRate, setExchangeRate] = useState<number>(1.5);
 
@@ -58,92 +59,138 @@ const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => 
     checkNetwork();
   }, [walletAddress]);
 
-//Fitur utama untuk mengeksekusi proses swap dengan langkah-langkah yang jelas dan terstruktur
-const handleSwapExecution = async () => {
+  // Alamat kontrak — pastikan ini sesuai dengan kontrak yang ter-deploy di Sepolia
+  const SWAP_CONTRACT_ADDRESS = "0x502e5a583223e5020924332a05a18f324FdaE736";
+  const ZTX_TOKEN_ADDRESS = "0xB5B8191408faF22a424C0Dda3333F86Cb0465B31"; // ← Ganti dengan alamat token ZTX yang benar
+
+  // Fitur utama untuk mengeksekusi proses swap dengan langkah-langkah yang jelas dan terstruktur
+  const handleSwapExecution = async () => {
     if (!walletAddress) {
       if (connectWallet) await connectWallet();
       return;
     }
 
     if (!amount || parseFloat(amount) <= 0) {
-      alert("Masukkan jumlah koin yang valid!");
+      setTxStatus({ type: "error", message: "Masukkan jumlah koin yang valid!" });
       return;
     }
+
+    if (isWrongNetwork) {
+      setTxStatus({ type: "error", message: "Harap ganti ke jaringan Sepolia Testnet terlebih dahulu!" });
+      return;
+    }
+
+    if (tokenIn !== "ZTX" || tokenOut !== "USDT") {
+      setTxStatus({ type: "error", message: "Pair ini belum didukung. Saat ini hanya ZTX → USDT yang aktif." });
+      return;
+    }
+
+    setTxStatus({ type: "idle", message: "" });
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
-      // DEFINISI ALAMAT KONTRAK SECARA TEGAS
-      const ADDR_SIMPLE_SWAP = "0x502e5a583223e5020924332a05a18f324FdaE736"; // Tempat Tukar Koin
-      const ADDR_TOKEN_ZTX  = "0x1a5654F13E8691EBba39EC99fd940e4C6632786e"; // Kontrak Koin ZTX
+      // LANGKAH 0: Verifikasi alamat signer sesuai dengan walletAddress yang terhubung
+      const signerAddress = await signer.getAddress();
+      if (signerAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+        setTxStatus({
+          type: "error",
+          message: "Alamat wallet tidak cocok. Coba disconnect dan connect ulang MetaMask.",
+        });
+        return;
+      }
 
-      if (tokenIn !== "ZTX" || tokenOut !== "USDT") {
-        alert("Smart contract SimpleSwap saat ini dikonfigurasi khusus untuk pair ZTX ke USDT.");
+      // LANGKAH 1: Verifikasi bahwa kode kontrak swap benar-benar ada di alamat tersebut
+      const contractCode = await provider.getCode(SWAP_CONTRACT_ADDRESS);
+      if (contractCode === "0x") {
+        setTxStatus({
+          type: "error",
+          message: `Tidak ada kontrak di alamat ${SWAP_CONTRACT_ADDRESS}. Periksa kembali alamat kontrak swap Anda.`,
+        });
         return;
       }
 
       const amountInWei = ethers.parseEther(amount);
 
-      // =================================================================
-      // PROSES 1: PERSETUJUAN (APPROVE) TOKEN ZTX
-      // =================================================================
+      // =====================================================================
+      // LANGKAH 2: APPROVE — Izinkan kontrak swap menarik token ZTX dari wallet
+      // Ini adalah langkah yang sebelumnya hilang dan menjadi penyebab revert!
+      // =====================================================================
       const erc20Abi = [
-        "function allowance(address owner, address spender) view returns (uint256)",
-        "function approve(address spender, uint256 amount) returns (bool)"
+        "function approve(address spender, uint256 amount) external returns (bool)",
+        "function allowance(address owner, address spender) external view returns (uint256)",
+        "function balanceOf(address account) external view returns (uint256)",
       ];
-      
-      const ztxContractInstance = new ethers.Contract(ADDR_TOKEN_ZTX, erc20Abi, signer);
-      
-      console.log("Memeriksa izin allowance token ZTX...");
-      let currentAllowance = BigInt(0);
-      try {
-        currentAllowance = await ztxContractInstance.allowance(walletAddress, ADDR_SIMPLE_SWAP);
-      } catch (e) {
-        console.log("Gagal membaca allowance, abaikan dan lanjut approve.");
+
+      const ztxToken = new ethers.Contract(ZTX_TOKEN_ADDRESS, erc20Abi, signer);
+
+      // Cek saldo ZTX cukup
+      const balance = await ztxToken.balanceOf(signerAddress);
+      if (balance < amountInWei) {
+        setTxStatus({
+          type: "error",
+          message: `Saldo ZTX tidak cukup. Saldo Anda: ${ethers.formatEther(balance)} ZTX`,
+        });
+        return;
       }
 
+      // Cek allowance yang sudah ada — jika sudah cukup, skip approve untuk hemat gas
+      const currentAllowance = await ztxToken.allowance(signerAddress, SWAP_CONTRACT_ADDRESS);
       if (currentAllowance < amountInWei) {
-   
-        
-        // Panggil fungsi approve langsung dari instance kontrak token ZTX
-        const txApprove = await ztxContractInstance.approve(
-          ADDR_SIMPLE_SWAP, 
-          ethers.parseEther("1000000"), // Beri izin limit besar agar tidak berulang
-          { gasLimit: 120000 }
-        );
-        
-        alert("Menunggu konfirmasi persetujuan dari blockchain Sepolia...");
-        await txApprove.wait();
-        alert("Persetujuan Berhasil! Lanjut ke Langkah 2...");
+        setTxStatus({ type: "approving", message: "Langkah 1/2: Konfirmasi izin (Approve) di MetaMask..." });
+        const approveTx = await ztxToken.approve(SWAP_CONTRACT_ADDRESS, amountInWei);
+        await approveTx.wait();
       }
 
-      // =================================================================
-      // PROSES 2: TRANSAKSI SWAP UTAMA (MENGGUNAKAN INSTANCE KONTRAK SEPARASI)
-      // =================================================================
+      // =====================================================================
+      // LANGKAH 3: SWAP — Sekarang eksekusi swap setelah approve berhasil
+      // =====================================================================
       const swapAbi = [
-        "function swapZtxForUsdt(uint256 amountIn) external returns (uint256)"
+        "function swapZtxForUsdt(uint256 amountIn) external returns (uint256)",
       ];
 
-      // Inisialisasi kontrak baru yang terpisah total agar aman
-      const swapContractInstance = new ethers.Contract(ADDR_SIMPLE_SWAP, swapAbi, signer);
+      const swapContract = new ethers.Contract(SWAP_CONTRACT_ADDRESS, swapAbi, signer);
 
-      
+      setTxStatus({ type: "swapping", message: "Langkah 2/2: Konfirmasi transaksi Swap di MetaMask..." });
 
-      // Panggil fungsi swapZtxForUsdt dari instance kontrak SimpleSwap
-      const txSwap = await swapContractInstance.swapZtxForUsdt(amountInWei, {
-        gasLimit: 350000 
+      const tx = await swapContract.swapZtxForUsdt(amountInWei, {
+        gasLimit: 300000,
       });
 
-      alert("Transaksi Swap terkirim! Menunggu konfirmasi block...");
-      await txSwap.wait();
-      
-      alert("🎉 Selamat! Proses Swap ZTX ke USDT Berhasil Sempurna.");
-      setAmount(""); // Reset input form
-      
+      setTxStatus({ type: "swapping", message: `Transaksi dikirim! Menunggu konfirmasi block Sepolia... (${tx.hash.slice(0, 10)}...)` });
+      const receipt = await tx.wait();
+
+      if (receipt.status === 0) {
+        // Transaksi masuk block tapi tetap revert — kemungkinan kontrak kehabisan likuiditas
+        setTxStatus({
+          type: "error",
+          message: "Swap di-revert oleh kontrak. Kemungkinan pool USDT kehabisan likuiditas. Periksa kontrak di Sepolia Etherscan.",
+        });
+        return;
+      }
+
+      setTxStatus({ type: "success", message: "🎉 Swap ZTX → USDT berhasil sempurna!" });
+      setAmount("");
+
     } catch (error: any) {
       console.error("Detail Error Transaksi:", error);
-      alert("Transaksi gagal: " + (error.reason || error.message || "Dibatalkan"));
+
+      // Parsing error yang lebih informatif
+      let userMessage = "Transaksi dibatalkan atau gagal.";
+      if (error.code === "ACTION_REJECTED") {
+        userMessage = "Transaksi ditolak oleh pengguna di MetaMask.";
+      } else if (error.code === "CALL_EXCEPTION") {
+        userMessage = "Kontrak me-revert transaksi. Pastikan: (1) alamat kontrak benar, (2) pool memiliki likuiditas USDT, (3) fungsi swapZtxForUsdt ada di ABI kontrak.";
+      } else if (error.code === "INSUFFICIENT_FUNDS") {
+        userMessage = "Saldo ETH tidak cukup untuk membayar gas.";
+      } else if (error.reason) {
+        userMessage = `Gagal: ${error.reason}`;
+      } else if (error.message) {
+        userMessage = `Gagal: ${error.message.slice(0, 120)}`;
+      }
+
+      setTxStatus({ type: "error", message: userMessage });
     }
   };
   // Menghitung hasil konversi otomatis secara real-time
@@ -219,7 +266,7 @@ const handleSwapExecution = async () => {
 
       {/* Warning Network */}
       {isWrongNetwork && (
-        <div className="flex items-start gap-2 bg-orange-50/50 p-4 rounded-2xl mb-6 border border-orange-100">
+        <div className="flex items-start gap-2 bg-orange-50/50 p-4 rounded-2xl mb-4 border border-orange-100">
           <div className="w-5 h-5 bg-orange-400 rounded-full text-white flex items-center justify-center text-xs font-bold shrink-0">!</div>
           <p className="text-[11px] text-orange-700 font-semibold leading-relaxed">
             The current network is inconsistent - please switch your wallet to Sepolia Testnet!
@@ -227,12 +274,39 @@ const handleSwapExecution = async () => {
         </div>
       )}
 
+      {/* Status Transaksi */}
+      {txStatus.type !== "idle" && (
+        <div className={`flex items-start gap-2 p-4 rounded-2xl mb-4 border text-[11px] font-semibold leading-relaxed ${
+          txStatus.type === "success"
+            ? "bg-green-50/70 border-green-100 text-green-700"
+            : txStatus.type === "error"
+            ? "bg-red-50/70 border-red-100 text-red-700"
+            : "bg-blue-50/70 border-blue-100 text-blue-700"
+        }`}>
+          <div className={`w-5 h-5 rounded-full text-white flex items-center justify-center text-xs font-bold shrink-0 ${
+            txStatus.type === "success" ? "bg-green-400"
+            : txStatus.type === "error" ? "bg-red-400"
+            : "bg-blue-400 animate-pulse"
+          }`}>
+            {txStatus.type === "success" ? "✓" : txStatus.type === "error" ? "✕" : "…"}
+          </div>
+          <p>{txStatus.message}</p>
+        </div>
+      )}
+
       {/* BUTTON AKSI */}
       <button 
         onClick={handleSwapExecution}
-        className="w-full bg-[#3366FF] hover:bg-blue-700 text-white py-5 rounded-[24px] font-bold text-lg shadow-lg shadow-blue-200 transition-all active:scale-[0.98]"
+        disabled={txStatus.type === "approving" || txStatus.type === "swapping"}
+        className="w-full bg-[#3366FF] hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white py-5 rounded-[24px] font-bold text-lg shadow-lg shadow-blue-200 transition-all active:scale-[0.98]"
       >
-        {walletAddress ? "Execute Swap" : "Connect Wallet"}
+        {txStatus.type === "approving"
+          ? "Menyetujui Token... (1/2)"
+          : txStatus.type === "swapping"
+          ? "Memproses Swap... (2/2)"
+          : walletAddress
+          ? "Execute Swap"
+          : "Connect Wallet"}
       </button>
     </div>
   );
