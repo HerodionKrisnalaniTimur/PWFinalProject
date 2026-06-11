@@ -60,8 +60,8 @@ const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => 
   }, [walletAddress]);
 
   // Alamat kontrak — pastikan ini sesuai dengan kontrak yang ter-deploy di Sepolia
-  const SWAP_CONTRACT_ADDRESS = "0x502e5a583223e5020924332a05a18f324FdaE736";
-  const ZTX_TOKEN_ADDRESS = "0xB5B8191408faF22a424C0Dda3333F86Cb0465B31"; // ← Ganti dengan alamat token ZTX yang benar
+  const SWAP_CONTRACT_ADDRESS = "0x264a7a4EEB939aee5968A89d376E0c68cea1E295";
+  const ZTX_TOKEN_ADDRESS = "0xBf7502475Cb5DB85077a89131a76De13638CccfD"; // ← Ganti dengan alamat token ZTX yang benar
 
   // Fitur utama untuk mengeksekusi proses swap dengan langkah-langkah yang jelas dan terstruktur
   const handleSwapExecution = async () => {
