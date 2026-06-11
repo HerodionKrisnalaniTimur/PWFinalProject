@@ -30,11 +30,11 @@ const handleConfirm = async () => {
       return;
     }
 
-    // Panggil fungsi service yang sudah kita bypass gas-nya kemarin
+    // Panggil fungsi service 
     await executeAddLiquidity(walletAddress, amountZtx, amountUsdt);
     
     alert("Likuiditas berhasil ditambahkan!");
-    onClose(); // Tutup modal
+    onClose();
   } catch (error: any) {
     console.error("Detail Error di Modal:", error);
     alert("Transaksi gagal! Periksa konsol browser untuk detail.");
@@ -102,7 +102,7 @@ const handleConfirm = async () => {
               {/* Input Koin 1: ZTX */}
               <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
                 <div className="flex justify-between text-xs font-semibold text-gray-400 mb-2">
-                  <span>Deposit Token 1</span>
+                  <span>Deposit Token</span>
                   <span>Balance: {balances.ztx}</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -121,7 +121,7 @@ const handleConfirm = async () => {
               {/* Input Koin 2: USDT */}
               <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
                 <div className="flex justify-between text-xs font-semibold text-gray-400 mb-2">
-                  <span>Deposit Token 2 (Paired)</span>
+                  <span>Deposit Token </span>
                   <span>Balance: {balances.usdt}</span>
                 </div>
                 <div className="flex items-center gap-2">

@@ -2,9 +2,9 @@ import { ethers } from "ethers";
 
 // 1. Konfigurasi Alamat Smart Contract
 export const CONTRACT_ADDRESSES = {
-  POOL_CONTRACT: "0x0DCd1Bf9A1b36cE34237eEaFef220932846BCD82", 
-  TOKEN_ZTX: "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e",
-  TOKEN_USDT: "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0"
+  POOL_CONTRACT: "0x243333BEbd46F6aFc37B2A0D1c2028762bE1dfb8", 
+  TOKEN_ZTX: "0x9FC47534cEe3550e1a0548ACBf9C0b58626963C0",
+  TOKEN_USDT: "0x7Ee2A3E21CF513596c4eEC64c1BB86b03bC98F3C"
 };
 
 // 2. Deklarasi ABI Standard
@@ -15,10 +15,11 @@ const ERC20_ABI = [
 ];
 
 const POOL_ABI = [
-  "function addLiquidity(uint256 amountZtx, uint256 amountUsdt) external returns (uint256)"
+  "function addLiquidity(uint256 amountZtx, uint256 amountUsdt) external returns (uint256)",
+  "function liquidityProviderZTX(address user) view returns (uint256)",
+  "function liquidityProviderUSDT(address user) view returns (uint256)"
 ];
 
-// 3. Helper untuk Mengambil Provider / Signer MetaMask
 export const getProviderOrSigner = async (needSigner = false) => {
   if (typeof window === "undefined" || !window.ethereum) throw new Error("MetaMask belum terinstall");
   const provider = new ethers.BrowserProvider(window.ethereum);
@@ -26,95 +27,110 @@ export const getProviderOrSigner = async (needSigner = false) => {
   return provider;
 };
 
-// 4. Fungsi Mengambil Saldo (Kebal terhadap CALL_EXCEPTION)
+// 3. Fungsi Ambil Saldo Riil dari Sepolia
 export const fetchTokenBalances = async (walletAddress: string) => {
   try {
     const provider = await getProviderOrSigner();
     const ztxContract = new ethers.Contract(CONTRACT_ADDRESSES.TOKEN_ZTX, ERC20_ABI, provider);
     const usdtContract = new ethers.Contract(CONTRACT_ADDRESSES.TOKEN_USDT, ERC20_ABI, provider);
 
-    let ztxBal = 0n;
-    let usdtBal = 0n;
-
-    try {
-      ztxBal = await ztxContract.balanceOf(walletAddress);
-    } catch (e) {
-      console.warn("Gagal membaca saldo ZTX riil, mengaktifkan simulasi aman.");
-      return { ztx: "100.00", usdt: "500.00" }; 
-    }
-
-    try {
-      usdtBal = await usdtContract.balanceOf(walletAddress);
-    } catch (e) {
-      usdtBal = ethers.parseEther("500");
-    }
+    const ztxBal = await ztxContract.balanceOf(walletAddress);
+    const usdtBal = await usdtContract.balanceOf(walletAddress);
 
     return {
       ztx: ethers.formatEther(ztxBal),
       usdt: ethers.formatEther(usdtBal)
     };
   } catch (error) {
-    return { ztx: "100.00", usdt: "500.00" };
+    console.error("Gagal mengambil saldo dari blockchain:", error);
+    return { ztx: "0.00", usdt: "0.00" };
   }
 };
 
-// 5. Fungsi Pengecekan & Overwrite Approve Token secara Aman
-export const approveTokenIfNecessary = async (
-  tokenAddress: string, 
-  ownerAddress: string, 
-  amountInWei: bigint
-) => {
-  const signer = await getProviderOrSigner(true);
-  const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-
-  let allowance: bigint = 0n;
-  
-  try {
-    allowance = await tokenContract.allowance(ownerAddress, CONTRACT_ADDRESSES.POOL_CONTRACT);
-  } catch (error) {
-    console.warn(`Gagal membaca allowance token (CALL_EXCEPTION). Menggunakan skema Overwrite.`);
-    allowance = 0n; 
-  }
-  
-  if (allowance < amountInWei) {
-    const tx = await tokenContract.approve(CONTRACT_ADDRESSES.POOL_CONTRACT, ethers.parseEther("10000000"));
-    await tx.wait();
-  }
-};
-
-// 6. Fungsi Utama Eksekusi Tambah Likuiditas (Pool)
+// 4. Fungsi Utama Eksekusi Tambah Likuiditas Interaktif lewat MetaMask
 export const executeAddLiquidity = async (
   walletAddress: string, 
   amountZtx: string, 
   amountUsdt: string
 ) => {
   const signer = await getProviderOrSigner(true);
+  
+  const ztxContract = new ethers.Contract(CONTRACT_ADDRESSES.TOKEN_ZTX, ERC20_ABI, signer);
+  const usdtContract = new ethers.Contract(CONTRACT_ADDRESSES.TOKEN_USDT, ERC20_ABI, signer);
   const poolContract = new ethers.Contract(CONTRACT_ADDRESSES.POOL_CONTRACT, POOL_ABI, signer);
 
   const ztxWei = ethers.parseEther(amountZtx);
   const usdtWei = ethers.parseEther(amountUsdt);
 
+  // ALUR INTERAKSI METAMASK: Approve ZTX -> Approve USDT -> Add Liquidity
+  console.log("Memulai proses transaksi...");
+  
+  const tx1 = await ztxContract.approve(CONTRACT_ADDRESSES.POOL_CONTRACT, ztxWei);
+  await tx1.wait();
+  console.log("Izin token ZTX disetujui!");
+
+  const tx2 = await usdtContract.approve(CONTRACT_ADDRESSES.POOL_CONTRACT, usdtWei);
+  await tx2.wait();
+  console.log("Izin token USDT disetujui!");
+
+  const txMain = await poolContract.addLiquidity(ztxWei, usdtWei);
+  return await txMain.wait();
+};
+
+export const fetchUserLiquidity = async (walletAddress: string) => {
   try {
-    alert("Langkah 1/3: Memeriksa & menyetujui izin akses Token ZTX...");
-    await approveTokenIfNecessary(CONTRACT_ADDRESSES.TOKEN_ZTX, walletAddress, ztxWei);
+    const provider = await getProviderOrSigner();
+    const poolContract = new ethers.Contract(CONTRACT_ADDRESSES.POOL_CONTRACT, POOL_ABI, provider);
 
-    alert("Langkah 2/3: Memeriksa & menyetujui izin akses Token USDT...");
-    await approveTokenIfNecessary(CONTRACT_ADDRESSES.TOKEN_USDT, walletAddress, usdtWei);
+    // Panggil mapping contract secara paralel
+    const [ztxLiquidityWei, usdtLiquidityWei] = await Promise.all([
+      poolContract.liquidityProviderZTX(walletAddress),
+      poolContract.liquidityProviderUSDT(walletAddress)
+    ]);
 
-    alert("Langkah 3/3: Mengirim transaksi Add Liquidity ke Blockchain...");
-    const txMain = await poolContract.addLiquidity(ztxWei, usdtWei, {
-      gasLimit: 300000
-    });
-    
-    return await txMain.wait();
-  } catch (err: any) {
-    if (err.message.includes("estimateGas") || err.message.includes("reverted")) {
-      alert("Menjalankan Mode Bypass Gas: Memaksa transaksi dengan limit manual...");
-      const txBypass = await poolContract.addLiquidity(ztxWei, usdtWei, {
-        gasLimit: 400000 
-      });
-      return await txBypass.wait();
-    }
-    throw err;
+    return {
+      ztx: parseFloat(ethers.formatEther(ztxLiquidityWei)),
+      usdt: parseFloat(ethers.formatEther(usdtLiquidityWei)),
+    };
+  } catch (error) {
+    console.error("Gagal mengambil data posisi likuiditas:", error);
+    return { ztx: 0, usdt: 0 };
+  }
+};
+
+
+// Fungsi untuk mengambil total koin yang mengendap di dalam Kontrak Pool (TVL)
+export const fetchGlobalPoolStats = async () => {
+  try {
+    const provider = await getProviderOrSigner();
+    const ztxContract = new ethers.Contract(CONTRACT_ADDRESSES.TOKEN_ZTX, ERC20_ABI, provider);
+    const usdtContract = new ethers.Contract(CONTRACT_ADDRESSES.TOKEN_USDT, ERC20_ABI, provider);
+
+    // Ambil total seluruh saldo token yang tersimpan di dalam alamat KONTRAK POOL (TVL)
+    const [totalZtxWei, totalUsdtWei] = await Promise.all([
+      ztxContract.balanceOf(CONTRACT_ADDRESSES.POOL_CONTRACT),
+      usdtContract.balanceOf(CONTRACT_ADDRESSES.POOL_CONTRACT)
+    ]);
+
+    const totalZtx = parseFloat(ethers.formatEther(totalZtxWei));
+    const totalUsdt = parseFloat(ethers.formatEther(totalUsdtWei));
+
+    // 1. Hitung Total Liquidity (Asumsi harga fixed rate: 1 ZTX = 0.1 USDT)
+    const totalLiquidityInUSD = (totalZtx * 0.1) + totalUsdt;
+
+    // 2. Hitung APR Dinamis (Simulasi: Alokasi hadiah 25,000 USDT per tahun dibagi dengan total likuiditas)
+    // Jika pool masih sangat baru/kosong, pasang default dasar 24.8%
+    const alokasiRewardPertahun = 25000;
+    const calculatedAPR = totalLiquidityInUSD > 0 
+      ? (alokasiRewardPertahun / totalLiquidityInUSD) * 100 
+      : 24.8;
+
+    return {
+      tvl: totalLiquidityInUSD,
+      apr: calculatedAPR > 300 ? 300 : calculatedAPR // Batasi max APR 300% agar rasional
+    };
+  } catch (error) {
+    console.error("Gagal mengambil statistik global pool:", error);
+    return { tvl: 0, apr: 24.8 };
   }
 };

@@ -6,7 +6,6 @@ import PageTransition from "../../components/PageTransition";
 
 import { Wallet } from "lucide-react";
 import { motion } from "framer-motion";
-import { ethers } from "ethers"; // Pastikan ethers di-import di sini
 
 declare global {
   interface Window {
@@ -18,81 +17,68 @@ const SwapPages: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
 
-  // Simulasi loading komponen
+  // 1. Simulasi efek loading kerangka halaman awal
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 2200);
+    }, 1500);
     return () => clearTimeout(timer);
   }, []);
 
-  // FUNGSI UNTUK SINKRONISASI ALAMAT METAMASK AKTIF
-  const syncWallet = async () => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        // Menggunakan BrowserProvider bawaan Ethers v6 yang sangat stabil di Vite
-        const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
-        const currentAddress = await signer.getAddress();
-        
-        // Simpan alamat asli MetaMask ke state React
-        setWalletAddress(currentAddress);
-        console.log("MetaMask Terkoneksi & Sinkron:", currentAddress);
-      } catch (error) {
-        // Jika user belum connect atau menolak konfirmasi
-        setWalletAddress("");
-      }
-    }
-  };
-
-  // DETEKSI OTOMATIS PERUBAHAN AKUN DAN REFRESH DI VITE
+  // 2. Cek koneksi akun secara otomatis
   useEffect(() => {
-    // Jalankan sinkronisasi saat pertama kali halaman dibuka
-    syncWallet();
+    const checkConnection = async () => {
+      if (typeof window !== "undefined" && window.ethereum) {
+        try {
+          const accounts: string[] = await window.ethereum.request({ 
+            method: "eth_accounts" 
+          });
+          if (accounts.length > 0) {
+            setWalletAddress(accounts[0]);
+          }
+        } catch (error) {
+          console.error("Gagal mengecek koneksi wallet:", error);
+        }
+      }
+    };
+    checkConnection();
+  }, []);
 
+  // 3. Listener Real-time untuk mendeteksi pergantian akun MetaMask
+  useEffect(() => {
     if (typeof window !== "undefined" && window.ethereum) {
-      // LISTENER: Jika user ganti akun langsung di MetaMask, jalankan fungsi sync ulang
       const handleAccountsChanged = (accounts: string[]) => {
         if (accounts.length > 0) {
-          syncWallet();
+          setWalletAddress(accounts[0]);
         } else {
           setWalletAddress("");
         }
       };
 
-      // LISTENER: Jika user ganti jaringan (network), reload halaman
-      const handleChainChanged = () => {
-        window.location.reload();
-      };
-
       window.ethereum.on("accountsChanged", handleAccountsChanged);
-      window.ethereum.on("chainChanged", handleChainChanged);
-
-      // Bersihkan listener saat halaman ditutup/pindah page
       return () => {
-        if (window.ethereum.removeListener) {
-          window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
-          window.ethereum.removeListener("chainChanged", handleChainChanged);
-        }
+        window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
       };
     }
   }, []);
 
-  // FUNGSI TOMBOL CONNECT WALLET (MEMAKSA POPUP METAMASK KELUAR)
-  const connectWallet = async () => {
+  // 4. Fungsi Interaktif Tombol Hubungkan / Ganti Wallet via MetaMask
+  const handleWalletAction = async () => {
     if (typeof window !== "undefined" && window.ethereum) {
       try {
-        // Memicu popup persetujuan MetaMask
         await window.ethereum.request({
+          method: "wallet_requestPermissions",
+          params: [{ eth_accounts: {} }],
+        });
+        const accounts = await window.ethereum.request({
           method: "eth_requestAccounts",
         });
-        // Setelah disetujui, ambil alamatnya dengan fungsi sinkronisasi yang ada
-        await syncWallet();
-      } catch (error) {
-        console.error("User membatalkan koneksi wallet", error);
+        setWalletAddress(accounts[0]);
+      } catch (error: any) {
+        console.error("Gagal mengonfigurasi wallet:", error);
       }
     } else {
-      alert("Silakan install ekstensi MetaMask terlebih dahulu!");
+      alert("Silakan pasang ekstensi MetaMask terlebih dahulu!");
     }
   };
 
@@ -104,21 +90,19 @@ const SwapPages: React.FC = () => {
   return (
     <PageTransition>
       <div className="min-h-screen bg-[#F8F9FA] flex text-[#1A1A1A] font-sans relative overflow-hidden">
-        {/* Animated Background */}
+        
+        {/* Ornamen Latar Belakang */}
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <div
-            className="absolute inset-0 opacity-40"
-            style={{
-              backgroundImage: "radial-gradient(#D1D5DB 1px, transparent 1px)",
-              backgroundSize: "30px 30px",
-            }}
-          />
+          <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(#D1D5DB 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
+          <motion.div animate={{ x: [0, 30, 0], y: [0, -40, 0] }} transition={{ duration: 14, repeat: Infinity }} className="absolute top-20 right-10 w-80 h-80 bg-purple-300/20 rounded-full blur-3xl" />
+          <motion.div animate={{ x: [0, -20, 0], y: [0, 20, 0] }} transition={{ duration: 12, repeat: Infinity }} className="absolute bottom-10 left-10 w-80 h-80 bg-blue-300/20 rounded-full blur-3xl" />
         </div>
 
         <SideBar />
 
         <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative overflow-y-auto">
-          {/* Header */}
+          
+          {/* HEADER BAR ATAS */}
           <header className="flex flex-col sm:flex-row justify-between sm:justify-end gap-3 mb-8">
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -130,24 +114,35 @@ const SwapPages: React.FC = () => {
               Zentrix Swap
             </motion.button>
 
-            {/* BUTTON CONNECT WALLET */}
+            {/* TOMBOL HUBUNGKAN WALLET (SINKRON DENGAN POOL PAGE) */}
             <motion.button
-              onClick={connectWallet}
+              onClick={handleWalletAction}
               whileHover={{ scale: 1.05 }}
-              className="bg-white/70 backdrop-blur-lg px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md cursor-pointer hover:bg-white transition-colors"
+              className={`px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border shadow-md cursor-pointer transition-all ${
+                walletAddress 
+                  ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-700 hover:from-emerald-100 hover:to-teal-100" 
+                  : "bg-white/70 border-white text-[#1A1A1A] hover:bg-white"
+              }`}
             >
-              <Wallet size={16} />
-              {walletAddress ? formatAddress(walletAddress) : "Connect Wallet"}
+              <Wallet size={16} className={walletAddress ? "text-emerald-600" : ""} />
+              {walletAddress ? `${formatAddress(walletAddress)}` : "Connect Wallet"}
             </motion.button>
           </header>
 
-          {/* Content */}
+          {/* KONTEN UTAMA SWAP */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="flex-1 flex flex-col items-center pt-2 sm:pt-6"
           >
-            {loading ? <SkeletonCard /> : <SwapCard walletAddress={walletAddress} connectWallet={connectWallet} />}
+            {loading ? (
+              <SkeletonCard />
+            ) : (
+              <SwapCard 
+                walletAddress={walletAddress} 
+                connectWallet={handleWalletAction} 
+              />
+            )}
           </motion.div>
         </main>
       </div>
