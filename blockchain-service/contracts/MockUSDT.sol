@@ -5,7 +5,7 @@ contract MockUSDT {
     string public name = "Mock USDT";
     string public symbol = "USDT";
     uint8 public decimals = 18;
-    uint256 public totalSupply = 1000000 * 10**18; // 1 Juta Mock USDT
+    uint256 public totalSupply = 1000000 * 10**18;
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 

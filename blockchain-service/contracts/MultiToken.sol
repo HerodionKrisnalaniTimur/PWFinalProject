@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-contract ZentrixToken {
-    string public name = "Zentrix";
-    string public symbol = "ZTX";
+contract MultiToken {
+    string public name;
+    string public symbol;
     uint8 public decimals = 18;
-    uint256 public totalSupply = 1000000 * 10**18; // 1 Juta Token ZTX
+    uint256 public totalSupply = 1000000 * 10**18; // 1 Juta Token
     
     mapping(address => uint256) public balanceOf;
     mapping(address => mapping(address => uint256)) public allowance;
 
-    constructor() {
-        balanceOf[msg.sender] = totalSupply; // Semua token diberikan ke deployer
+    // Sekarang nama dan simbol bisa ditentukan secara dinamis saat deploy
+    constructor(string memory _name, string memory _symbol) {
+        name = _name;
+        symbol = _symbol;
+        balanceOf[msg.sender] = totalSupply; 
     }
 
     function transfer(address to, uint256 amount) public returns (bool) {
@@ -21,13 +24,11 @@ contract ZentrixToken {
         return true;
     }
 
-    // WAJIB ADA: Memberikan izin akses token ke kontrak Pool
     function approve(address spender, uint256 amount) public returns (bool) {
         allowance[msg.sender][spender] = amount;
         return true;
     }
 
-    // WAJIB ADA: Mengizinkan kontrak Pool menarik token dari user setelah di-approve
     function transferFrom(address from, address to, uint256 amount) public returns (bool) {
         require(balanceOf[from] >= amount, "Saldo tidak cukup");
         require(allowance[from][msg.sender] >= amount, "Belum di-approve");

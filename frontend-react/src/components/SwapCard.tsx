@@ -1,223 +1,269 @@
-import { useState, useEffect } from 'react';
-import { Settings, ArrowDown } from 'lucide-react';
-import { getContractRate, executeUniversalSwap } from '../service/swapService';
-import { fetchTokenBalances } from '../service/poolService';
+import React, { useState, useEffect, useCallback } from "react";
+import { ArrowDownUp, Info, AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+// JALUR IMPOR YANG BENAR & BERSIH (Murni memanggil fungsi aktif dari file service Anda)
+import { fetchAllTokenBalances } from "../services/poolService";
+import { fetchLiveTokenRate, executeOnChainMultiSwap } from "../services/swapService"; 
+// Catatan: Jika folder Anda adalah src/services/swapService.ts, gunakan path di bawah ini:
+// import { fetchLiveTokenRate, executeOnChainMultiSwap } from "../services/swapService";
 
 interface SwapCardProps {
-  walletAddress?: string;
-  connectWallet?: () => Promise<void>;
+  walletAddress: string;
+  connectWallet: () => Promise<void>;
 }
 
+const TOKENS = [
+  { id: "USDT", name: "Mock USDT", color: "bg-green-500" },
+  { id: "ZTX", name: "Zentrix Token", color: "bg-blue-600" },
+  { id: "AGT", name: "Agate International", color: "bg-purple-600" },
+  { id: "TOG", name: "Toge Productions", color: "bg-amber-600" },
+  { id: "DGH", name: "Digital Happiness", color: "bg-red-500" },
+  { id: "MJK", name: "Mojiken Studio", color: "bg-cyan-500" },
+];
+
 const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => {
-  const [amount, setAmount] = useState("");
-  const [tokenIn, setTokenIn] = useState("USDT"); 
-  const [tokenOut, setTokenOut] = useState("ZTX");
-  const [contractRate, setContractRate] = useState<number>(10);
-  const [balances, setBalances] = useState({ ztx: "0.00", usdt: "0.00" });
-  
-  const [txStatus, setTxStatus] = useState<{ 
-    type: "idle" | "approving" | "swapping" | "success" | "error"; 
-    message: string 
-  }>({ type: "idle", message: "" });
+  const [tokenIn, setTokenIn] = useState<string>("USDT");
+  const [tokenOut, setTokenOut] = useState<string>("ZTX");
+  const [amount, setAmount] = useState<string>("");
+  const [balances, setBalances] = useState<Record<string, string>>({});
+  const [rates, setRates] = useState<Record<string, number>>({
+    USDT: 1.0, ZTX: 0.7, AGT: 2.0, TOG: 1.5, DGH: 1.0, MJK: 0.5
+  });
+  const [txStatus, setTxStatus] = useState<{ type: string; message: string } | null>(null);
 
-  const loadBalances = async (address: string) => {
+  // Fungsi pengambil data aman dibungkus useCallback agar lolos aturan React 19 Compiler
+  const loadBlockchainData = useCallback(async (isMounted: boolean) => {
+    if (!walletAddress) return;
+
     try {
-      const userBalances = await fetchTokenBalances(address);
-      setBalances({
-        ztx: parseFloat(userBalances.ztx).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-        usdt: parseFloat(userBalances.usdt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      });
-    } catch (error) {
-      console.error("Gagal memuat saldo:", error);
-    }
-  };
+      const realBalances = await fetchAllTokenBalances(walletAddress);
+      const rateIn = await fetchLiveTokenRate(tokenIn);
+      const rateOut = await fetchLiveTokenRate(tokenOut);
+      
+      if (isMounted) {
+        const formattedBalances: Record<string, string> = {};
+        Object.keys(realBalances).forEach((symbol) => {
+          formattedBalances[symbol] = parseFloat(realBalances[symbol]).toFixed(2);
+        });
 
-  useEffect(() => {
-    const initData = async () => {
-      const liveRate = await getContractRate();
-      setContractRate(liveRate);
-      if (walletAddress) {
-        await loadBalances(walletAddress);
+        setBalances(formattedBalances);
+        setRates((prev) => ({
+          ...prev,
+          [tokenIn]: rateIn,
+          [tokenOut]: rateOut
+        }));
       }
-    };
-    initData();
-  }, [walletAddress]);
+    } catch (error) {
+      console.error("Gagal sinkronisasi data blockchain:", error);
+    }
+  }, [walletAddress, tokenIn, tokenOut]);
 
-  // Fungsi switch arah diaktifkan penuh tanpa memblokir input
-  const handleSwitch = () => {
-    const tempIn = tokenIn;
+  // Hook efek terisolasi murni asinkron dengan cleanup flag
+  useEffect(() => {
+    let isMounted = true;
+
+    if (walletAddress) {
+      loadBlockchainData(isMounted);
+    } else {
+      setBalances({});
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [walletAddress, loadBlockchainData]);
+
+  const handleSwitchTokens = () => {
     setTokenIn(tokenOut);
-    setTokenOut(tempIn);
-    setAmount(""); 
-    setTxStatus({ type: "idle", message: "" });
+    setTokenOut(tokenIn);
+    setAmount("");
   };
 
   const calculateOutput = (): string => {
-    if (!amount || isNaN(Number(amount))) return "0.0";
-    
-    if (tokenIn === "USDT" && tokenOut === "ZTX") {
-      return (Number(amount) * contractRate).toFixed(2); 
-    } else if (tokenIn === "ZTX" && tokenOut === "USDT") {
-      return (Number(amount) / contractRate).toFixed(2); 
-    }
-    return amount;
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) return "0.0000";
+    const rateIn = rates[tokenIn] || 1.0;
+    const rateOut = rates[tokenOut] || 1.0;
+    return ((Number(amount) * rateIn) / rateOut).toFixed(4);
   };
 
-  const getDisplayBalance = (token: string) => {
-    return token === "USDT" ? balances.usdt : balances.ztx;
-  };
+  const outputAmount = calculateOutput();
+  const currentBalance = balances[tokenIn] || "0.00";
+  const isInsufficientBalance = Number(amount) > Number(currentBalance);
 
   const handleSwapExecution = async () => {
     if (!walletAddress) {
-      if (connectWallet) await connectWallet();
+      await connectWallet();
       return;
     }
-
-    if (!amount || Number(amount) <= 0) {
-      setTxStatus({ type: "error", message: "Masukkan jumlah token yang valid!" });
-      return;
-    }
-
-    // Validasi Saldo Sebelum Transaksi Menguras Gas Fee
-    const rawBalance = tokenIn === "USDT" 
-      ? parseFloat(balances.usdt.replace(/,/g, '')) 
-      : parseFloat(balances.ztx.replace(/,/g, ''));
-
-    if (Number(amount) > rawBalance) {
-      setTxStatus({ type: "error", message: `Saldo ${tokenIn} Anda tidak mencukupi untuk melakukan swap!` });
-      return;
-    }
+    if (!amount || Number(amount) <= 0 || isInsufficientBalance) return;
 
     try {
-      setTxStatus({ 
-        type: "approving", 
-        message: `Langkah 1/2: Menyetujui batas transaksi ${tokenIn} Anda di MetaMask...` 
-      });
-      
-      // Eksekusi Universal Dua Arah
-      await executeUniversalSwap(tokenIn, amount);
-
-      setTxStatus({ 
-        type: "swapping", 
-        message: "Langkah 2/2: Memfinalisasi pertukaran token di blockchain..." 
+      setTxStatus({
+        type: "processing",
+        message: `Meminta otorisasi transfer (Approve) ${tokenIn} dan mengirim transaksi swap ke Sepolia...`,
       });
 
-      setTxStatus({ 
-        type: "success", 
-        message: `Swap Berhasil! Anda menukar ${amount} ${tokenIn} menjadi ${calculateOutput()} ${tokenOut}.` 
+      const receipt = await executeOnChainMultiSwap(tokenIn, tokenOut, amount);
+
+      setTxStatus({
+        type: "success",
+        message: `Swap Berhasil! Anda menukar ${amount} ${tokenIn} menjadi ${outputAmount} ${tokenOut}.`,
       });
-      
-      setAmount(""); 
-      await loadBalances(walletAddress); // Update otomatis saldo dompet
+
+      const newTx = {
+        id: receipt.hash || Date.now().toString(),
+        tokenIn,
+        tokenOut,
+        amountIn: amount,
+        amountOut: outputAmount,
+        timestamp: new Date().toLocaleString("id-ID", { hour12: false }),
+        status: "Success",
+      };
+      const existingHistory = JSON.parse(localStorage.getItem(`swap_history_${walletAddress}`) || "[]");
+      localStorage.setItem(`swap_history_${walletAddress}`, JSON.stringify([newTx, ...existingHistory]));
+      window.dispatchEvent(new Event("storage_history_updated"));
+
+      setAmount("");
+      await loadBlockchainData(true);
     } catch (error: any) {
-      console.error(error);
+      console.error("Kesalahan Swap On-Chain:", error);
       setTxStatus({ 
         type: "error", 
-        message: error.reason || error.message || "Transaksi dibatalkan atau terjadi kegagalan jaringan Sepolia." 
+        message: error.message || "Transaksi dibatalkan atau eksekusi Smart Contract gagal." 
       });
     }
   };
 
+  const getDirectRate = (): string => {
+    const rateIn = rates[tokenIn] || 1.0;
+    const rateOut = rates[tokenOut] || 1.0;
+    return (rateIn / rateOut).toFixed(4);
+  };
+
   return (
-    <div className="w-full max-w-[440px] bg-white/80 backdrop-blur-xl rounded-[32px] p-6 shadow-xl border border-white/50 relative overflow-hidden">
-      
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-gray-800 tracking-tight">Swap</h3>
-        <button className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-500">
-          <Settings size={20} />
-        </button>
+    <div className="w-full max-w-[440px] bg-white rounded-[32px] p-6 shadow-xl border border-gray-100 relative">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-bold text-gray-800">Swap Tokens</h3>
+        <span className="text-[11px] bg-blue-50 text-blue-600 font-bold px-2.5 py-1 rounded-xl flex items-center gap-1">
+          <Info size={12} /> Live Multi-Router
+        </span>
       </div>
 
-      <div className="space-y-2 relative">
-        {/* INPUT TOKEN ASAL */}
-        <div className="bg-[#F4F6F9] p-4 rounded-2xl border border-transparent focus-within:border-blue-500/30 transition-all">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-semibold text-gray-400">You Pay</span>
-            <span className="text-xs font-medium text-gray-400">
-              Balance: <span className="text-gray-600 font-semibold">{getDisplayBalance(tokenIn)}</span>
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <input
-              type="text"
-              placeholder="0.0"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              disabled={txStatus.type === "approving" || txStatus.type === "swapping"}
-              className="w-2/3 bg-transparent text-2xl font-bold text-gray-800 outline-none placeholder-gray-400"
-            />
-            <div className="bg-white px-3 py-2 rounded-xl shadow-sm border border-gray-100 font-bold text-gray-700 text-sm">
-              {tokenIn}
-            </div>
-          </div>
+      {/* INPUT SEKTOR */}
+      <div className="bg-[#F8F9FA] p-4 rounded-2xl border border-gray-100 mb-2">
+        <div className="flex justify-between text-xs text-gray-400 font-semibold mb-2">
+          <span>You Pay</span>
+          <span>Balance: {currentBalance}</span>
         </div>
-
-        {/* TOMBOL ARROW SWITCH */}
-        <div className="absolute left-1/2 top-[41%] -translate-x-1/2 -translate-y-1/2 z-10">
-          <button 
-            onClick={handleSwitch}
-            className="bg-white p-2.5 rounded-xl shadow-md border border-gray-100 text-[#3366FF] hover:scale-110 active:scale-95 transition-all cursor-pointer"
+        <div className="flex gap-3 items-center">
+          <input
+            type="number"
+            placeholder="0.0"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            disabled={txStatus?.type === "processing"}
+            className="w-full bg-transparent text-2xl font-bold text-gray-800 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <select
+            value={tokenIn}
+            onChange={(e) => {
+              setTokenIn(e.target.value);
+              if (e.target.value === tokenOut) setTokenOut(tokenIn);
+            }}
+            className="bg-white px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold shadow-sm focus:outline-none cursor-pointer"
           >
-            <ArrowDown size={16} />
-          </button>
-        </div>
-
-        {/* OUTPUT TOKEN TUJUAN */}
-        <div className="bg-[#F4F6F9] p-4 rounded-2xl border border-transparent">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-semibold text-gray-400">You Receive</span>
-            <span className="text-xs font-medium text-gray-400">
-              Balance: <span className="text-gray-600 font-semibold">{getDisplayBalance(tokenOut)}</span>
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <p className="text-2xl font-bold text-gray-800">
-              {calculateOutput()}
-            </p>
-            <div className="bg-white px-3 py-2 rounded-xl shadow-sm border border-gray-100 font-bold text-gray-700 text-sm">
-              {tokenOut}
-            </div>
-          </div>
+            {TOKENS.map((t) => (
+              <option key={t.id} value={t.id}>{t.id}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      <div className="mt-4 px-2 flex justify-between items-center text-xs text-gray-400 font-medium">
-        <span>Price Rate</span>
-        {tokenIn === "USDT" ? (
-          <span>1 USDT = {contractRate} ZTX</span>
-        ) : (
-          <span>1 ZTX = {(1 / contractRate).toFixed(2)} USDT</span>
-        )}
+      {/* REVERSE BUTTON */}
+      <div className="flex justify-center -my-3 relative z-10">
+        <motion.button
+          onClick={handleSwitchTokens}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          className="bg-white p-2.5 rounded-xl shadow-md border border-gray-100 text-blue-600 hover:bg-gray-50 cursor-pointer"
+        >
+          <ArrowDownUp size={16} />
+        </motion.button>
       </div>
 
-      {txStatus.type !== "idle" && (
-        <div className={`mt-5 p-4 rounded-2xl flex gap-3 items-center border text-[11px] font-semibold leading-relaxed ${
-          txStatus.type === "success" ? "bg-green-50/70 border-green-100 text-green-700"
-            : txStatus.type === "error" ? "bg-red-50/70 border-red-100 text-red-700"
-            : "bg-blue-50/70 border-blue-100 text-blue-700"
-        }`}>
-          <div className={`w-5 h-5 rounded-full text-white flex items-center justify-center text-xs font-bold shrink-0 ${
-            txStatus.type === "success" ? "bg-green-400"
-              : txStatus.type === "error" ? "bg-red-400"
-              : "bg-blue-400 animate-pulse"
-          }`}>
-            {txStatus.type === "success" ? "✓" : txStatus.type === "error" ? "✕" : "…"}
-          </div>
-          <p>{txStatus.message}</p>
+      {/* OUTPUT SEKTOR */}
+      <div className="bg-[#F8F9FA] p-4 rounded-2xl border border-gray-100 mt-2 mb-4">
+        <div className="flex justify-between text-xs text-gray-400 font-semibold mb-2">
+          <span>You Receive</span>
+          <span>Balance: {balances[tokenOut] || "0.00"}</span>
         </div>
-      )}
+        <div className="flex gap-3 items-center">
+          <div className="w-full text-2xl font-bold text-gray-800">{outputAmount}</div>
+          <select
+            value={tokenOut}
+            onChange={(e) => {
+              setTokenOut(e.target.value);
+              if (e.target.value === tokenIn) setTokenIn(tokenOut);
+            }}
+            className="bg-white px-3 py-2 rounded-xl border border-gray-200 text-sm font-bold shadow-sm focus:outline-none cursor-pointer"
+          >
+            {TOKENS.map((t) => (
+              <option key={t.id} value={t.id}>{t.id}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-      <button 
+      <div className="px-2 py-2.5 bg-gray-50 rounded-xl border border-gray-100/70 space-y-1.5 text-xs text-gray-500 mb-5">
+        <div className="flex justify-between">
+          <span>Price Rate</span>
+          <span className="font-bold text-gray-700">1 {tokenIn} = {getDirectRate()} {tokenOut}</span>
+        </div>
+      </div>
+
+      {/* SUBMIT BUTTON */}
+      <motion.button
         onClick={handleSwapExecution}
-        disabled={txStatus.type === "approving" || txStatus.type === "swapping"}
-        className="w-full bg-[#3366FF] hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed text-white py-4 px-6 rounded-2xl font-bold mt-5 shadow-lg shadow-blue-500/20 transition-all active:scale-[0.99] cursor-pointer text-center text-sm"
+        disabled={txStatus?.type === "processing" || (!!walletAddress && (!amount || Number(amount) <= 0 || isInsufficientBalance))}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        className={`w-full py-4 rounded-2xl text-sm font-bold tracking-wide shadow-md flex items-center justify-center gap-2 cursor-pointer ${
+          !walletAddress
+            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
+            : isInsufficientBalance
+            ? "bg-red-500 text-white opacity-90 cursor-not-allowed"
+            : !amount || Number(amount) <= 0
+            ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
+            : "bg-gradient-to-r from-emerald-600 to-teal-600 text-white"
+        }`}
       >
-        {!walletAddress ? "Connect Wallet" 
-          : txStatus.type === "approving" ? "Approving Tokens..." 
-          : txStatus.type === "swapping" ? "Swapping..." 
-          : "Swap Now"}
-      </button>
+        {txStatus?.type === "processing" && <Loader2 size={16} className="animate-spin" />}
+        {!walletAddress ? "Connect Wallet" : isInsufficientBalance ? "Insufficient Balance" : !amount || Number(amount) <= 0 ? "Enter an Amount" : "Swap Assets Now"}
+      </motion.button>
 
+      {/* NOTIFICATION */}
+      <AnimatePresence>
+        {txStatus && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className={`mt-4 p-4 rounded-2xl flex items-start gap-3 border text-xs leading-relaxed ${
+              txStatus.type === "processing" ? "bg-blue-50 border-blue-100 text-blue-700" : txStatus.type === "success" ? "bg-emerald-50 border-emerald-100 text-emerald-800" : "bg-red-50 border-red-100 text-red-700"
+            }`}
+          >
+            {txStatus.type === "processing" ? <Loader2 size={16} className="animate-spin shrink-0 text-blue-500 mt-0.5" /> : txStatus.type === "success" ? <CheckCircle2 size={16} className="shrink-0 text-emerald-600 mt-0.5" /> : <AlertCircle size={16} className="shrink-0 text-red-500 mt-0.5" />}
+            <div className="flex-1">
+              <p className="font-bold mb-0.5">{txStatus.type === "processing" ? "Transaction Pending" : txStatus.type === "success" ? "Success" : "Error"}</p>
+              <p className="opacity-90">{txStatus.message}</p>
+              {txStatus.type !== "processing" && (
+                <button onClick={() => setTxStatus(null)} className="mt-2 font-bold underline block opacity-80 hover:opacity-100 cursor-pointer">Dismiss</button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

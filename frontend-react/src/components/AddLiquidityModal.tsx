@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, ArrowDown, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { fetchTokenBalances, executeAddLiquidity } from "../service/poolService";
+import { fetchAllTokenBalances, executeAddLiquidity } from "../services/poolService";
 
 interface AddLiquidityModalProps {
   isOpen: boolean;
@@ -16,10 +16,11 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({ isOpen, onClose, 
   const [balances, setBalances] = useState({ ztx: "0.00", usdt: "0.00" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load saldo riil saat modal dibuka
   useEffect(() => {
     if (isOpen && walletAddress) {
-      fetchTokenBalances(walletAddress).then(setBalances);
+      fetchAllTokenBalances(walletAddress).then((balances) => {
+        setBalances({ ztx: balances.ZTX || "0.00", usdt: balances.USDT || "0.00" });
+      });
     }
   }, [isOpen, walletAddress]);
 

@@ -2,7 +2,7 @@ import Sidebar from "../../components/SideBar";
 import PageTransition from "../../components/PageTransition";
 import AddLiquidityModal from "../../components/AddLiquidityModal";
 import PoolCard from "../../components/PoolCard"; 
-import { fetchTokenBalances, fetchUserLiquidity, fetchGlobalPoolStats } from "../../service/poolService";
+import { fetchAllTokenBalances, fetchUserLiquidity, fetchGlobalPoolStats } from "../../services/poolService";
 
 import {
   Wallet,
@@ -227,13 +227,16 @@ const PoolPage = () => {
       </div>
 
       {/* Modal Pop-up Tambah Likuiditas */}
-      <AddLiquidityModal 
-        isOpen={isModalOpen} 
+      <AddLiquidityModal
+        isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
-          if (walletAddress) loadLiquidityData(walletAddress); // Re-fetch otomatis saat modal ditutup
-        }} 
+          if (walletAddress) loadLiquidityData(walletAddress);
+        }}
         walletAddress={walletAddress}
+        onSuccess={() => {
+          if (walletAddress) loadLiquidityData(walletAddress);
+        }}
       />
     </PageTransition>
   );

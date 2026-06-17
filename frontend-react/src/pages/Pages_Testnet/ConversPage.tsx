@@ -1,4 +1,4 @@
-import Sidebar from "../../components/Sidebar";
+import Sidebar from "../../components/SideBar";
 import PageTransition from "../../components/PageTransition";
 import CardConvert from "../../components/CardConvert";
 import CardListConvert from "../../components/CardListConvert";

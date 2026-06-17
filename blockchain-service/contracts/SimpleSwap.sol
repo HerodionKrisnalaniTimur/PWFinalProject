@@ -8,44 +8,68 @@ interface IERC20 {
 }
 
 contract SimpleSwap {
-    IERC20 public tokenZTX;
-    IERC20 public tokenUSDT;
-    
-    uint256 public rate = 10; 
+    address public tokenUSDT;
+    address public owner;
 
-    // Mapping untuk mencatat berapa banyak likuiditas yang disediakan oleh user
-    mapping(address => uint256) public liquidityProviderZTX;
-    mapping(address => uint256) public liquidityProviderUSDT;
+    // Mapping Alamat Token -> Nilai Token terhadap USDT (Skala Pengali basis 100)
+    // Contoh: ZTX bernilai 0.7 USDT -> Diinput 70
+    // Contoh: AGT bernilai 2.0 USDT -> Diinput 200
+    mapping(address => uint256) public tokenRates;
+    mapping(address => bool) public isSupportedToken;
 
-    constructor(address _tokenZTX, address _tokenUSDT) {
-        tokenZTX = IERC20(_tokenZTX);
-        tokenUSDT = IERC20(_tokenUSDT);
+    // Mapping untuk melacak setoran likuiditas per user per token
+    mapping(address => mapping(address => uint256)) public liquidityPool;
+
+    constructor(address _tokenUSDT) {
+        tokenUSDT = _tokenUSDT;
+        owner = msg.sender;
+        
+        // Daftarkan USDT ke dalam list dengan rate 1.0 (100)
+        tokenRates[_tokenUSDT] = 100;
+        isSupportedToken[_tokenUSDT] = true;
     }
 
-    // WAJIB ADA: Fungsi utama untuk menambahkan likuiditas ke dalam Pool
-    function addLiquidity(uint256 amountZtx, uint256 amountUsdt) external returns (uint256) {
-        require(amountZtx > 0 && amountUsdt > 0, "Nominal harus lebih dari 0");
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Bukan pemilik kontrak");
+        _;}
 
-        // Tarik token ZTX dari dompet user ke dalam kontrak ini
-        require(tokenZTX.transferFrom(msg.sender, address(this), amountZtx), "Transfer ZTX gagal");
-        
-        // Tarik token USDT dari dompet user ke dalam kontrak ini
-        require(tokenUSDT.transferFrom(msg.sender, address(this), amountUsdt), "Transfer USDT gagal");
-
-        // Catat kontribusi likuiditas user
-        liquidityProviderZTX[msg.sender] += amountZtx;
-        liquidityProviderUSDT[msg.sender] += amountUsdt;
-
-        return amountZtx; // Mengembalikan tanda sukses
+    // Fungsi bagi Owner untuk mendaftarkan / memperbarui koin game baru beserta harganya
+    function setTokenRate(address tokenAddress, uint256 rateInUsdtScaled) external onlyOwner {
+        require(tokenAddress != address(0), "Alamat tidak valid");
+        tokenRates[tokenAddress] = rateInUsdtScaled;
+        isSupportedToken[tokenAddress] = true;
     }
 
-    // Fungsi Swap USDT menjadi ZTX (Mengambil dari cadangan likuiditas kontrak)
-    function swapUsdtForZtx(uint256 amountUSDT) public {
-        uint256 amountZTX = amountUSDT * rate;
+    // Fungsi Universal untuk menambahkan likuiditas koin apa saja ke dalam Pool
+    function addLiquidity(address tokenAddress, uint256 amount) external returns (bool) {
+        require(isSupportedToken[tokenAddress], "Token tidak didukung");
+        require(amount > 0, "Nominal harus lebih dari 0");
+
+        require(IERC20(tokenAddress).transferFrom(msg.sender, address(this), amount), "Transfer ke pool gagal");
+        liquidityPool[msg.sender][tokenAddress] += amount;
         
-        require(tokenUSDT.transferFrom(msg.sender, address(this), amountUSDT), "Gagal menarik USDT");
-        require(tokenZTX.balanceOf(address(this)) >= amountZTX, "Cadangan likuiditas ZTX di Pool kosong!");
+        return true;
+    }
+
+    // FUNGSI INTI: Multi-Token Cross Swap (Bisa Swap MJK ke AGT, ZTX ke USDT, dll)
+    function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
+        require(isSupportedToken[tokenIn] && isSupportedToken[tokenOut], "Rute token tidak didukung");
+        require(amountIn > 0, "Nominal swap harus lebih dari 0");
+
+        uint256 rateIn = tokenRates[tokenIn];
+        uint256 rateOut = tokenRates[tokenOut];
+
+        // Rumus Cross-Swap Universal Aman Desimal:
+        // AmountOut = (AmountIn * RateIn) / RateOut
+        uint256 amountOut = (amountIn * rateIn) / rateOut;
+
+        // Ambil token asal dari dompet user
+        require(IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn), "Gagal menarik token asal");
         
-        require(tokenZTX.transfer(msg.sender, amountZTX), "Transfer ZTX ke user gagal");
+        // Periksa apakah cadangan likuiditas di dalam pool mencukupi
+        require(IERC20(tokenOut).balanceOf(address(this)) >= amountOut, "Likuiditas koin tujuan di pool tidak cukup!");
+
+        // Kirim koin hasil swap ke dompet user
+        require(IERC20(tokenOut).transfer(msg.sender, amountOut), "Gagal mengirimkan koin hasil swap");
     }
 }
