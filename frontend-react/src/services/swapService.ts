@@ -12,11 +12,11 @@ export const fetchLiveTokenRate = async (tokenSymbol: string): Promise<number> =
     const provider = await getProviderOrSigner();
     const swapContract = new ethers.Contract(CONTRACT_ADDRESSES.POOL_CONTRACT, MULTI_SWAP_ABI, provider);
     const tokenAddress = CONTRACT_ADDRESSES[`TOKEN_${tokenSymbol}` as keyof typeof CONTRACT_ADDRESSES];
-    
+
     if (!tokenAddress) return 1.0;
-    
+
     const rateScaled = await swapContract.tokenRates(tokenAddress);
-    return Number(rateScaled) / 100; // Kembalikan skala basis 100 ke desimal asli
+    return Number(rateScaled) / 100;
   } catch (error) {
     console.error(`Gagal mengambil rate live ${tokenSymbol}:`, error);
     const fallbacks: Record<string, number> = { USDT: 1.0, ZTX: 0.7, AGT: 2.0, TOG: 1.5, DGH: 1.0, MJK: 0.5 };
@@ -24,7 +24,11 @@ export const fetchLiveTokenRate = async (tokenSymbol: string): Promise<number> =
   }
 };
 
-export const executeOnChainMultiSwap = async (tokenInSymbol: string, tokenOutSymbol: string, amountInStr: string) => {
+export const executeOnChainMultiSwap = async (
+  tokenInSymbol: string,
+  tokenOutSymbol: string,
+  amountInStr: string
+) => {
   const signer = await getProviderOrSigner(true);
   const amountInWei = ethers.parseEther(amountInStr);
 

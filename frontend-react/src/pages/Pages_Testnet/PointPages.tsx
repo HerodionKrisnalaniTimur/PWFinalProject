@@ -13,7 +13,7 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 declare global {
-  interface Window {
+  interface Window { 
     ethereum?: any;
   }
 }

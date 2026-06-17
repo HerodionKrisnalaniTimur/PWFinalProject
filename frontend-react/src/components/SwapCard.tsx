@@ -128,9 +128,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ walletAddress, connectWallet }) => 
       await loadBlockchainData(true);
     } catch (error: any) {
       console.error("Kesalahan Swap On-Chain:", error);
-      setTxStatus({ 
-        type: "error", 
-        message: error.message || "Transaksi dibatalkan atau eksekusi Smart Contract gagal." 
+      setTxStatus({
+        type: "error",
+        message: error.message || "Transaksi dibatalkan atau eksekusi Smart Contract gagal."
       });
     }
   };

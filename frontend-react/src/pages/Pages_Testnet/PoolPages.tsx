@@ -1,19 +1,21 @@
 import Sidebar from "../../components/SideBar";
 import PageTransition from "../../components/PageTransition";
 import AddLiquidityModal from "../../components/AddLiquidityModal";
-import PoolCard from "../../components/PoolCard"; 
-import { fetchAllTokenBalances, fetchUserLiquidity, fetchGlobalPoolStats } from "../../services/poolService";
-
+import PoolCard from "../../components/PoolCard";
+import LiquidityHistory from "../../components/LiquidityHistory";
 import {
-  Wallet,
-  Droplets,
-  Plus,
-  TrendingUp,
-  Coins,
-} from "lucide-react";
+  fetchUserLiquidity,
+  fetchGlobalPoolStats,
+  getAllPools,
+  getLiquidityHistory,
+  calculateTotalStats,
+  getUserPositionsFromHistory,
+  LiquidityHistoryItem,
+} from "../../services/poolService";
 
+import { Wallet, Droplets, Plus, TrendingUp, Coins } from "lucide-react";
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 declare global {
   interface Window {
@@ -21,48 +23,87 @@ declare global {
   }
 }
 
-interface LiquidityPosition {
-  ztx: number;
-  usdt: number;
+interface PoolPosition {
+  token1: string;
+  token2: string;
+  amount1: number;
+  amount2: number;
+}
+
+interface PoolStats {
+  tvl: number;
+  apr: number;
+  activePositions: number;
 }
 
 const PoolPage = () => {
   const [loading, setLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [userLiquidity, setUserLiquidity] = useState<LiquidityPosition>({ ztx: 0, usdt: 0 });
-  
-  // State baru untuk menampung data TVL dan APR global dari blockchain
-  const [globalStats, setGlobalStats] = useState({ tvl: 0, apr: 24.8 });
+  const [userPositions, setUserPositions] = useState<PoolPosition[]>([]);
+  const [globalStats, setGlobalStats] = useState<PoolStats>({ tvl: 0, apr: 24.8, activePositions: 0 });
+  const [history, setHistory] = useState<LiquidityHistoryItem[]>([]);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Fungsi untuk memuat saldo likuiditas user & statistik global 
   const loadLiquidityData = async (address: string) => {
-    setLoading(true);
     try {
-      const [data, stats] = await Promise.all([
-        fetchUserLiquidity(address),
-        fetchGlobalPoolStats() // Mengambil data makro pool dari smart contract
-      ]);
-      setUserLiquidity(data);
+      // Get positions from history
+      const positionsData = getUserPositionsFromHistory(address);
+      const positions: PoolPosition[] = Object.values(positionsData).filter(
+        (pos: any) => pos.amount1 > 0 || pos.amount2 > 0
+      );
+
+      // Calculate stats from history
+      const stats = calculateTotalStats(address);
+
+      // Get history
+      const historyData = getLiquidityHistory(address);
+
+      setUserPositions(positions);
       setGlobalStats(stats);
+      setHistory(historyData);
     } catch (error) {
       console.error("Gagal memuat data pool:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Pengecekan otomatis koneksi wallet saat halaman dimuat
+  const setupAutoRefresh = (address: string) => {
+    // Clear existing interval jika ada
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+    }
+
+    // Setup polling setiap 3 detik
+    refreshIntervalRef.current = setInterval(() => {
+      loadLiquidityData(address);
+    }, 3000);
+  };
+
+  // Event listener untuk history updates
+  useEffect(() => {
+    const handleHistoryUpdate = () => {
+      if (walletAddress) {
+        loadLiquidityData(walletAddress);
+      }
+    };
+
+    window.addEventListener("liquidity_history_updated", handleHistoryUpdate);
+    return () => {
+      window.removeEventListener("liquidity_history_updated", handleHistoryUpdate);
+    };
+  }, [walletAddress]);
+
+  // Initial connection check
   useEffect(() => {
     const checkConnection = async () => {
       if (typeof window !== "undefined" && window.ethereum) {
         try {
-          const accounts: string[] = await window.ethereum.request({ 
-            method: "eth_accounts" 
+          const accounts: string[] = await window.ethereum.request({
+            method: "eth_accounts",
           });
           if (accounts.length > 0) {
             setWalletAddress(accounts[0]);
-            loadLiquidityData(accounts[0]);
+            setLoading(false);
           } else {
             setLoading(false);
           }
@@ -77,16 +118,35 @@ const PoolPage = () => {
     checkConnection();
   }, []);
 
-  // Listener deteksi otomatis pergantian akun MetaMask
+  // Setup auto-refresh when wallet connects
+  useEffect(() => {
+    if (walletAddress) {
+      loadLiquidityData(walletAddress);
+      setupAutoRefresh(walletAddress);
+    }
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [walletAddress]);
+
+  // Listen for account changes
   useEffect(() => {
     if (typeof window !== "undefined" && window.ethereum) {
       const handleAccountsChanged = (accounts: string[]) => {
         if (accounts.length > 0) {
           setWalletAddress(accounts[0]);
           loadLiquidityData(accounts[0]);
+          setupAutoRefresh(accounts[0]);
         } else {
           setWalletAddress("");
-          setUserLiquidity({ ztx: 0, usdt: 0 });
+          setUserPositions([]);
+          setHistory([]);
+          if (refreshIntervalRef.current) {
+            clearInterval(refreshIntervalRef.current);
+          }
         }
       };
 
@@ -109,6 +169,7 @@ const PoolPage = () => {
         });
         setWalletAddress(accounts[0]);
         loadLiquidityData(accounts[0]);
+        setupAutoRefresh(accounts[0]);
       } catch (error: any) {
         console.error("Gagal mengonfigurasi wallet:", error);
       }
@@ -122,12 +183,12 @@ const PoolPage = () => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
-  const activePoolsCount = userLiquidity.ztx > 0 || userLiquidity.usdt > 0 ? 1 : 0;
+  const pools = getAllPools();
+  const activePoolsCount = userPositions.length;
 
   return (
     <PageTransition>
       <div className="min-h-screen bg-[#F8F9FA] flex text-[#1A1A1A] font-sans relative overflow-hidden">
-        
         {/* Latar Belakang */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(#D1D5DB 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
@@ -138,7 +199,6 @@ const PoolPage = () => {
         <Sidebar />
 
         <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative overflow-y-auto custom-scrollbar">
-          
           {/* Bagian Bar Atas */}
           <header className="flex flex-col sm:flex-row justify-between sm:justify-end gap-3 mb-8">
             <motion.button whileHover={{ scale: 1.05 }} className="bg-white/70 backdrop-blur-xl px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md">
@@ -160,7 +220,6 @@ const PoolPage = () => {
 
           {/* Dashboard Pool */}
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto bg-white/70 backdrop-blur-2xl rounded-[32px] p-5 sm:p-8 border border-white shadow-2xl">
-            
             {/* Judul & Tombol Tambah Likuiditas */}
             <div className="flex flex-col lg:flex-row gap-6 lg:items-center lg:justify-between mb-10">
               <div>
@@ -178,27 +237,48 @@ const PoolPage = () => {
               </motion.button>
             </div>
 
-            {/* Bagian Grid Statistik Atas (Sekarang Sudah Dinamis) */}
+            {/* Bagian Grid Statistik Atas - Real-time Update */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
               <motion.div whileHover={{ y: -5 }} className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
-                <div className="flex items-center justify-between mb-5"><TrendingUp className="text-green-500" /><span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-xl">+12%</span></div>
+                <div className="flex items-center justify-between mb-5">
+                  <TrendingUp className="text-green-500" />
+                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-xl">+12%</span>
+                </div>
                 <h3 className="text-gray-500 text-sm mb-2">Total APR</h3>
-                <p className="text-3xl font-bold">{globalStats.apr.toFixed(1)}%</p>
+                <motion.p key={globalStats.apr} className="text-3xl font-bold">{globalStats.apr.toFixed(1)}%</motion.p>
               </motion.div>
 
               <motion.div whileHover={{ y: -5 }} className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
-                <div className="flex items-center justify-between mb-5"><Coins className="text-yellow-500" /></div>
+                <div className="flex items-center justify-between mb-5">
+                  <Coins className="text-yellow-500" />
+                </div>
                 <h3 className="text-gray-500 text-sm mb-2">Total Liquidity</h3>
-                <p className="text-3xl font-bold">
+                <motion.p key={globalStats.tvl} className="text-3xl font-bold">
                   ${globalStats.tvl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </p>
+                </motion.p>
               </motion.div>
 
               <motion.div whileHover={{ y: -5 }} className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
-                <div className="flex items-center justify-between mb-5"><Droplets className="text-cyan-500" /></div>
+                <div className="flex items-center justify-between mb-5">
+                  <Droplets className="text-cyan-500" />
+                </div>
                 <h3 className="text-gray-500 text-sm mb-2">Your Pools</h3>
-                <p className="text-3xl font-bold">{activePoolsCount}</p>
+                <motion.p key={globalStats.activePositions} className="text-3xl font-bold">{globalStats.activePositions}</motion.p>
               </motion.div>
+            </div>
+
+            {/* Pool Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-8">
+              {pools.slice(0, 8).map(pool => (
+                <motion.div
+                  key={`${pool.token1}_${pool.token2}`}
+                  whileHover={{ y: -2 }}
+                  className="bg-white/60 rounded-2xl p-4 border border-white text-center cursor-pointer hover:shadow-md transition-all"
+                >
+                  <p className="font-bold text-sm text-gray-800">{pool.token1}/{pool.token2}</p>
+                  <p className="text-xs text-gray-500 mt-1">Ratio: {pool.ratio.toFixed(2)}</p>
+                </motion.div>
+              ))}
             </div>
 
             {/* Konten Pool */}
@@ -207,10 +287,7 @@ const PoolPage = () => {
                 <div className="h-24 rounded-3xl bg-gray-200"></div>
               </div>
             ) : activePoolsCount > 0 ? (
-              <PoolCard 
-                ztxAmount={userLiquidity.ztx} 
-                usdtAmount={userLiquidity.usdt} 
-              />
+              <PoolCard positions={userPositions} />
             ) : (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -218,10 +295,12 @@ const PoolPage = () => {
                 className="h-56 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center justify-center text-gray-400 font-medium bg-[#F8F9FA]/60"
               >
                 <Droplets size={42} className="mb-4 text-gray-300" />
-                <p className="text-center text-sm sm:text-base">Target wallet does not have any active liquidity positions.</p>
+                <p className="text-center text-sm sm:text-base">Anda belum memiliki posisi likuiditas aktif. Mulai dengan menambahkan likuiditas!</p>
               </motion.div>
             )}
 
+            {/* Liquidity History - New Section */}
+            <LiquidityHistory history={history} walletAddress={walletAddress} />
           </motion.div>
         </main>
       </div>
