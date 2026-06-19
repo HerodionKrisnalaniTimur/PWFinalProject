@@ -10,6 +10,10 @@ import PoolPage from './pages/Pages_Testnet/PoolPages';
 import PointsPage from './pages/Pages_Testnet/PointPages';
 import { AnimatePresence } from 'framer-motion';
 import ConversPage from "./pages/Pages_Testnet/ConversPage";
+import NewsPage from './pages/NewsPage';
+import ArticleDetail from './pages/ArticleDetail';
+import CreateArticle from './pages/CreateArticle';
+import EditArticle from './pages/EditArticle';
 
 // Kita buat komponen LandingPage agar App.tsx tidak terlalu penuh
 const LandingPage = () => (
@@ -54,6 +58,10 @@ function App() {
         <Route path="/pool" element={<PoolPage />} />
         <Route path="/points" element={<PointsPage />} />
         <Route path="/convers" element={<ConversPage />} />
+        <Route path="/news" element={<NewsPage />} />
+        <Route path="/news/:id" element={<ArticleDetail />} />
+        <Route path="/admin/create" element={<CreateArticle />} />
+        <Route path="/admin/edit/:id" element={<EditArticle />} />
         
       </Routes></AnimatePresence>
     </Router>
