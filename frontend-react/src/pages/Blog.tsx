@@ -55,14 +55,14 @@ export default function BlogAppleCarousel() {
 
   const step = cardW + GAP;
 
-  // 🔥 infinite loop
+  // infinite loop
   const extended = [...data, ...data, ...data];
   const baseIndex = data.length;
 
   const x = useMotionValue(0);
   const [index, setIndex] = useState(baseIndex);
 
-  // 🔥 set posisi awal (center)
+  // set posisi awal (center)
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -72,7 +72,7 @@ export default function BlogAppleCarousel() {
     x.set(-(index * step) + centerOffset);
   }, [cardW]);
 
-  // 🔥 SNAP FUNCTION (inti semua)
+  // SNAP FUNCTION (inti semua)
   const snapTo = (i: number) => {
     if (!containerRef.current) return;
 
@@ -86,7 +86,7 @@ export default function BlogAppleCarousel() {
       stiffness: 160,
       damping: 20,
     }).then(() => {
-      // 🔥 invisible reset (infinite illusion)
+      // invisible reset (infinite illusion)
       if (i <= data.length - 1) {
         const ni = i + data.length;
         x.set(-(ni * step) + centerOffset);
@@ -104,7 +104,7 @@ export default function BlogAppleCarousel() {
   const next = () => snapTo(index + 1);
   const prev = () => snapTo(index - 1);
 
-  // 🔥 FIX DRAG SNAP (inti bug sebelumnya)
+  // FIX DRAG SNAP (inti bug sebelumnya)
   const onDragEnd = () => {
     if (!containerRef.current) return;
 
