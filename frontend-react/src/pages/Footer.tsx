@@ -98,6 +98,7 @@ export default function Footer() {
               {col.links.map((link, idx) => {
                 // 2. Deteksi apakah link saat ini adalah "News" atau "Blog"
                 const isNewsRoute = link === "News" || link === "Blog";
+                const isTwitter = link === "Twitter";
 
                 return (
                   <li
@@ -109,6 +110,10 @@ export default function Footer() {
                       <Link to="/news" className="block w-full">
                         {link}
                       </Link>
+                    ) : isTwitter ? (
+                      <a href="https://x.com/Zentrix_Co" target="_blank" rel="noopener noreferrer" className="block w-full">
+                        {link}
+                      </a>
                     ) : (
                       <span>{link}</span>
                     )}
