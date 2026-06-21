@@ -72,11 +72,7 @@ const LiquidityHistory = ({ history, walletAddress }: LiquidityHistoryProps) => 
                 </div>
               </div>
 
-              {/* Type Badge */}
-              <div className={`flex-shrink-0 px-3 py-1 rounded-lg text-xs font-bold border ${getTypeColor(item.type)} flex items-center gap-1`}>
-                <Plus size={12} />
-                {getTypeLabel(item.type)}
-              </div>
+             
 
               {/* Time */}
               <div className="flex-shrink-0 text-right">

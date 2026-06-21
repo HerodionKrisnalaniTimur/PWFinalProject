@@ -36,7 +36,7 @@ export const fetchAllTokenBalances = async (walletAddress: string) => {
   try {
     const provider = await getProviderOrSigner();
 
-    // Siapkan instance contract untuk setiap token
+    // instance contract untuk setiap token
     const contracts: Record<string, ethers.Contract> = {};
     const tokens = ["USDT", "ZTX", "AGT", "TOG", "DGH", "MJK"];
 
@@ -67,7 +67,7 @@ export const fetchAllTokenBalances = async (walletAddress: string) => {
 };
 
 
-// Definisi semua pool pairs yang tersedia
+// Definisi semua pool
 const POOL_PAIRS = [
   { token1: "USDT", token2: "ZTX", ratio: 1.5 },
   { token1: "USDT", token2: "AGT", ratio: 0.5 },
