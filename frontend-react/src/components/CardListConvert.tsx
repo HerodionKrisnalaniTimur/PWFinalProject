@@ -19,6 +19,19 @@ interface CryptoAsset {
 const CardListConvert = () => {
   const [cryptoList, setCryptoList] = useState<CryptoAsset[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
+  const toggleFavorite = (symbol: string) => {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(symbol)) {
+        next.delete(symbol);
+      } else {
+        next.add(symbol);
+      }
+      return next;
+    });
+  };
 
   // ==========================================
   // INTEGRASI API: LIVE CRYPTO MARKET (COINGECKO)
@@ -35,14 +48,13 @@ const CardListConvert = () => {
         rank: index + 1,
         name: coin.name,
         symbol: coin.symbol.toUpperCase(),
-        logo: coin.image, // Mengambil link logo asli langsung dari API CoinGecko
+        logo: coin.image,
         priceIdr: coin.current_price,
         change1h: coin.price_change_percentage_1h_in_currency ? parseFloat(coin.price_change_percentage_1h_in_currency.toFixed(2)) : 0,
         change24h: coin.price_change_percentage_24h ? parseFloat(coin.price_change_percentage_24h.toFixed(2)) : 0,
         change7d: coin.price_change_percentage_7d_in_currency ? parseFloat(coin.price_change_percentage_7d_in_currency.toFixed(2)) : 0,
         volume24h: coin.total_volume,
         marketCap: coin.market_cap,
-        // Normalisasi koordinat sparkline untuk SVG
         sparklineData: coin.sparkline_in_7d?.price 
           ? coin.sparkline_in_7d.price.filter((_: any, i: number) => i % 16 === 0).map((p: number) => {
               const min = Math.min(...coin.sparkline_in_7d.price);
@@ -62,7 +74,6 @@ const CardListConvert = () => {
 
   useEffect(() => {
     fetchCryptoTableData();
-    // Auto-refresh setiap 60 detik
     const interval = setInterval(fetchCryptoTableData, 60000);
     return () => clearInterval(interval);
   }, []);
@@ -104,10 +115,24 @@ const CardListConvert = () => {
           <tbody>
             {cryptoList.map((coin) => {
               const isDown = coin.change24h < 0;
+              const isFav = favorites.has(coin.symbol);
               return (
                 <tr key={coin.symbol} className="border-b border-gray-50 hover:bg-gray-50/70 transition-colors group">
                   <td className="py-4 px-2 text-center text-xs text-gray-400 font-bold">
-                    <Star size={12} className="inline mr-1 cursor-pointer hover:text-yellow-400 transition-colors" />
+                    <button
+                      onClick={() => toggleFavorite(coin.symbol)}
+                      className="inline-flex items-center justify-center cursor-pointer transition-transform active:scale-110 mr-1"
+                      aria-label={isFav ? "Remove from favorites" : "Add to favorites"}
+                    >
+                      <Star
+                        size={13}
+                        className={`transition-colors duration-200 ${
+                          isFav
+                            ? "fill-yellow-400 text-yellow-400"
+                            : "fill-none text-gray-300 hover:text-yellow-400"
+                        }`}
+                      />
+                    </button>
                     {coin.rank}
                   </td>
                   <td className="py-4 px-4">
@@ -150,8 +175,7 @@ const CardListConvert = () => {
                     <div className="w-24 h-8 mx-auto flex items-end justify-center">
                       <svg className="w-full h-full" viewBox="0 0 100 50">
                         <polyline
-                          fill="none
-"
+                          fill="none"
                           stroke={isDown ? "#EF4444" : "#10B981"}
                           strokeWidth="2.5"
                           points={coin.sparklineData.map((val, idx) => {
