@@ -8,7 +8,7 @@ const columns = [
   { title: "Explore", links: ["Ecosystem", "Onboarding Guide"] },
   { title: "Learn", links: ["Technology", "Blog", "News", "FAQ"] },
   { title: "Company", links: ["Careers", "User Agreement", "Privacy Policy"] },
-  { title: "Community", links: ["Discord", "Twitter", "LinkedIn"] },
+  { title: "Community", links: ["Discord", "X", "LinkedIn"] },
 ];
 
 export default function Footer() {
@@ -98,7 +98,7 @@ export default function Footer() {
               {col.links.map((link, idx) => {
                 // 2. Deteksi apakah link saat ini adalah "News" atau "Blog"
                 const isNewsRoute = link === "News" || link === "Blog";
-                const isTwitter = link === "Twitter";
+                const isTwitter = link === "X";
 
                 return (
                   <li
