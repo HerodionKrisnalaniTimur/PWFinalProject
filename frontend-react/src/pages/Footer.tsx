@@ -1,13 +1,14 @@
 import { motion } from "framer-motion";
 import { Disc as Discord, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom"; // <-- 1. Import Link dari react-router-dom
 
 const columns = [
   { title: "Build", links: ["Docs", "Testnet", "Grants"] },
   { title: "Explore", links: ["Ecosystem", "Onboarding Guide"] },
   { title: "Learn", links: ["Technology", "Blog", "News", "FAQ"] },
   { title: "Company", links: ["Careers", "User Agreement", "Privacy Policy"] },
-  { title: "Community", links: ["Discord", "Twitter", "LinkedIn"] },
+  { title: "Community", links: ["Discord", "X", "LinkedIn"] },
 ];
 
 export default function Footer() {
@@ -94,14 +95,31 @@ export default function Footer() {
             </h4>
 
             <ul className="space-y-2">
-              {col.links.map((link, idx) => (
-                <li
-                  key={idx}
-                  className="text-sm text-zinc-300 hover:text-blue-400 transition cursor-pointer"
-                >
-                  {link}
-                </li>
-              ))}
+              {col.links.map((link, idx) => {
+                // 2. Deteksi apakah link saat ini adalah "News" atau "Blog"
+                const isNewsRoute = link === "News" || link === "Blog";
+                const isTwitter = link === "X";
+
+                return (
+                  <li
+                    key={idx}
+                    className="text-sm text-zinc-300 hover:text-blue-400 transition cursor-pointer"
+                  >
+                    {/* 3. Gunakan Link jika cocok, jika tidak gunakan teks biasa */}
+                    {isNewsRoute ? (
+                      <Link to="/news" className="block w-full">
+                        {link}
+                      </Link>
+                    ) : isTwitter ? (
+                      <a href="https://x.com/Zentrix_Co" target="_blank" rel="noopener noreferrer" className="block w-full">
+                        {link}
+                      </a>
+                    ) : (
+                      <span>{link}</span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
 
           </div>

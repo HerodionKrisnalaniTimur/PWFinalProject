@@ -24,7 +24,7 @@ import neilPin from "../../assets/sanshee_coffee-talk_Neil-collector_s-pin.webp"
 import standee from "../../assets/product-image_Coffee-Talk_Hyde-Neil-Standee_WBG.webp";
 import mojikenCard from "../../assets/Game Gift Card MojiKeN.png";
 declare global {
-  interface Window {
+  interface Window { 
     ethereum?: any;
   }
 }
