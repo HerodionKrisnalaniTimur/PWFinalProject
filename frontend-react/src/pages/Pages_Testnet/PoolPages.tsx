@@ -3,9 +3,8 @@ import PageTransition from "../../components/PageTransition";
 import AddLiquidityModal from "../../components/AddLiquidityModal";
 import PoolCard from "../../components/PoolCard";
 import LiquidityHistory from "../../components/LiquidityHistory";
+
 import {
-  fetchUserLiquidity,
-  fetchGlobalPoolStats,
   getAllPools,
   getLiquidityHistory,
   calculateTotalStats,
@@ -13,7 +12,14 @@ import {
   LiquidityHistoryItem,
 } from "../../services/poolService";
 
-import { Wallet, Droplets, Plus, TrendingUp, Coins } from "lucide-react";
+import {
+  Wallet,
+  Droplets,
+  Plus,
+  TrendingUp,
+  Coins,
+} from "lucide-react";
+
 import { motion } from "framer-motion";
 import { useEffect, useState, useRef } from "react";
 
@@ -24,10 +30,8 @@ declare global {
 }
 
 interface PoolPosition {
-  token1: string;
-  token2: string;
-  amount1: number;
-  amount2: number;
+  token: string;
+  amount: number;
 }
 
 interface PoolStats {
@@ -38,59 +42,92 @@ interface PoolStats {
 
 const PoolPage = () => {
   const [loading, setLoading] = useState(true);
-  const [walletAddress, setWalletAddress] = useState<string>("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // =========================================================
-  // STATE BARU: Untuk menyimpan pasangan token yang di-klik
-  // =========================================================
-  const [selectedShortcut, setSelectedShortcut] = useState<string>("USDT_ZTX");
 
-  const [userPositions, setUserPositions] = useState<PoolPosition[]>([]);
-  // Mengembalikan nilai default APR 24.8% sesuai tampilan visual aslinya
-  const [globalStats, setGlobalStats] = useState<PoolStats>({ tvl: 15.80, apr: 24.8, activePositions: 2 });
-  const [history, setHistory] = useState<LiquidityHistoryItem[]>([]);
-  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [walletAddress, setWalletAddress] =
+    useState<string>("");
 
-  // Fungsi saat card kecil pasangan token di-klik (Shortcut)
-  const handleShortcutClick = (token1: string, token2: string) => {
-    setSelectedShortcut(`${token1}_${token2}`); // Simpan data pasang token (misal: "USDT_ZTX")
-    setIsModalOpen(true);                        // Langsung pemicu modal terbuka
+  const [isModalOpen, setIsModalOpen] =
+    useState(false);
+
+  const [selectedShortcut, setSelectedShortcut] =
+    useState<string>("");
+
+  const [userPositions, setUserPositions] =
+    useState<PoolPosition[]>([]);
+
+  const [globalStats, setGlobalStats] =
+    useState<PoolStats>({
+      tvl: 15.8,
+      apr: 24.8,
+      activePositions: 0,
+    });
+
+  const [history, setHistory] =
+    useState<LiquidityHistoryItem[]>([]);
+
+  const refreshIntervalRef =
+    useRef<NodeJS.Timeout | null>(null);
+
+  const handleShortcutClick = (
+    token: string
+  ) => {
+    setSelectedShortcut(token);
+    setIsModalOpen(true);
   };
 
-  // Fungsi saat tombol utama "+ Add Liquidity" di-klik
   const handleOpenGeneralModal = () => {
-    setSelectedShortcut("USDT_ZTX");             // Gunakan default awal
-    setIsModalOpen(true);                        // Buka modal
+    const allPools = getAllPools();
+    // Filter USDT dan MJK
+    const filteredPools = allPools.filter(
+      (p) => p.token !== 'USDT' && p.token !== 'MJK'
+    );
+    const defaultToken = filteredPools.length > 0 ? filteredPools[0].token : '';
+    setSelectedShortcut(defaultToken);
+    setIsModalOpen(true);
   };
 
-  const loadLiquidityData = async (address: string) => {
+  const loadLiquidityData = async (
+    address: string
+  ) => {
     try {
-      const positionsData = getUserPositionsFromHistory(address);
-      const positions: PoolPosition[] = Object.values(positionsData).filter(
-        (pos: any) => pos.amount1 > 0 || pos.amount2 > 0
-      );
+      const positionsData =
+        getUserPositionsFromHistory(address);
+
+      const positions: PoolPosition[] =
+        Object.values(positionsData).filter((pos: any) => pos.amount > 0
+        );
 
       const stats = calculateTotalStats(address);
-      const historyData = getLiquidityHistory(address);
+
+      const historyData =
+        getLiquidityHistory(address);
 
       setUserPositions(positions);
       setGlobalStats(stats);
       setHistory(historyData);
     } catch (error) {
-      console.error("Gagal memuat data pool:", error);
+      console.error(
+        "Gagal memuat data pool:",
+        error
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const setupAutoRefresh = (address: string) => {
+  const setupAutoRefresh = (
+    address: string
+  ) => {
     if (refreshIntervalRef.current) {
-      clearInterval(refreshIntervalRef.current);
+      clearInterval(
+        refreshIntervalRef.current
+      );
     }
-    refreshIntervalRef.current = setInterval(() => {
-      loadLiquidityData(address);
-    }, 3000);
+
+    refreshIntervalRef.current =
+      setInterval(() => {
+        loadLiquidityData(address);
+      }, 3000);
   };
 
   useEffect(() => {
@@ -99,32 +136,46 @@ const PoolPage = () => {
         loadLiquidityData(walletAddress);
       }
     };
-    window.addEventListener("liquidity_history_updated", handleHistoryUpdate);
+
+    window.addEventListener(
+      "liquidity_history_updated",
+      handleHistoryUpdate
+    );
+
     return () => {
-      window.removeEventListener("liquidity_history_updated", handleHistoryUpdate);
+      window.removeEventListener(
+        "liquidity_history_updated",
+        handleHistoryUpdate
+      );
     };
   }, [walletAddress]);
 
   useEffect(() => {
     const checkConnection = async () => {
-      if (typeof window !== "undefined" && window.ethereum) {
+      if (
+        typeof window !== "undefined" &&
+        window.ethereum
+      ) {
         try {
-          const accounts: string[] = await window.ethereum.request({
-            method: "eth_accounts",
-          });
+          const accounts: string[] =
+            await window.ethereum.request({
+              method: "eth_accounts",
+            });
+
           if (accounts.length > 0) {
             setWalletAddress(accounts[0]);
           } else {
             setLoading(false);
           }
         } catch (error) {
-          console.error("Gagal mengecek koneksi:", error);
+          console.error(error);
           setLoading(false);
         }
       } else {
         setLoading(false);
       }
     };
+
     checkConnection();
   }, []);
 
@@ -133,16 +184,24 @@ const PoolPage = () => {
       loadLiquidityData(walletAddress);
       setupAutoRefresh(walletAddress);
     }
+
     return () => {
       if (refreshIntervalRef.current) {
-        clearInterval(refreshIntervalRef.current);
+        clearInterval(
+          refreshIntervalRef.current
+        );
       }
     };
   }, [walletAddress]);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      const handleAccountsChanged = (accounts: string[]) => {
+    if (
+      typeof window !== "undefined" &&
+      window.ethereum
+    ) {
+      const handleAccountsChanged = (
+        accounts: string[]
+      ) => {
         if (accounts.length > 0) {
           setWalletAddress(accounts[0]);
           loadLiquidityData(accounts[0]);
@@ -151,184 +210,325 @@ const PoolPage = () => {
           setWalletAddress("");
           setUserPositions([]);
           setHistory([]);
-          setGlobalStats({ tvl: 0, apr: 24.8, activePositions: 0 });
+
+          setGlobalStats({
+            tvl: 0,
+            apr: 24.8,
+            activePositions: 0,
+          });
+
           if (refreshIntervalRef.current) {
-            clearInterval(refreshIntervalRef.current);
+            clearInterval(
+              refreshIntervalRef.current
+            );
           }
         }
       };
-      window.ethereum.on("accountsChanged", handleAccountsChanged);
+
+      window.ethereum.on(
+        "accountsChanged",
+        handleAccountsChanged
+      );
+
       return () => {
-        window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+        window.ethereum.removeListener(
+          "accountsChanged",
+          handleAccountsChanged
+        );
       };
     }
   }, []);
 
-  const handleWalletAction = async () => {
-    if (typeof window !== "undefined" && window.ethereum) {
-      try {
-        await window.ethereum.request({
-          method: "wallet_requestPermissions",
-          params: [{ eth_accounts: {} }],
-        });
-        const accounts = await window.ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        setWalletAddress(accounts[0]);
-        loadLiquidityData(accounts[0]);
-        setupAutoRefresh(accounts[0]);
-      } catch (error: any) {
-        console.error("Gagal mengonfigurasi wallet:", error);
-      }
-    } else {
-      alert("Silakan install ekstensi MetaMask terlebih dahulu!");
-    }
-  };
+  const handleWalletAction =
+    async () => {
+      if (
+        typeof window !== "undefined" &&
+        window.ethereum
+      ) {
+        try {
+          await window.ethereum.request({
+            method:
+              "wallet_requestPermissions",
+            params: [
+              {
+                eth_accounts: {},
+              },
+            ],
+          });
 
-  const formatAddress = (address: string): string => {
-    if (!address) return "";
-    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+          const accounts =
+            await window.ethereum.request({
+              method:
+                "eth_requestAccounts",
+            });
+
+          setWalletAddress(accounts[0]);
+
+          loadLiquidityData(accounts[0]);
+
+          setupAutoRefresh(accounts[0]);
+        } catch (error) {
+          console.error(error);
+        }
+      } else {
+        alert(
+          "Silakan install MetaMask terlebih dahulu!"
+        );
+      }
+    };
+
+  const formatAddress = (
+    address: string
+  ) => {
+    return `${address.substring(
+      0,
+      6
+    )}...${address.substring(
+      address.length - 4
+    )}`;
   };
 
   const pools = getAllPools();
-  const activePoolsCount = userPositions.length;
+
+  const activePoolsCount =
+    userPositions.length;
 
   return (
     <PageTransition>
       <div className="min-h-screen bg-[#F8F9FA] flex text-[#1A1A1A] font-sans relative overflow-hidden">
-        {/* Latar Belakang (Desain Titik & Blur Sesuai Aslinya) */}
+
         <div className="absolute inset-0 z-0 overflow-hidden">
-          <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(#D1D5DB 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
-          <motion.div animate={{ x: [0, 40, 0], y: [0, -20, 0] }} transition={{ duration: 12, repeat: Infinity }} className="absolute top-10 left-10 w-72 h-72 bg-cyan-300/30 rounded-full blur-3xl" />
-          <motion.div animate={{ x: [0, -30, 0], y: [0, 30, 0] }} transition={{ duration: 10, repeat: Infinity }} className="absolute bottom-0 right-0 w-72 h-72 bg-blue-300/30 rounded-full blur-3xl" />
+          <div
+            className="absolute inset-0 opacity-40"
+            style={{
+              backgroundImage:
+                "radial-gradient(#D1D5DB 1px, transparent 1px)",
+              backgroundSize:
+                "30px 30px",
+            }}
+          />
+
+          <motion.div
+            animate={{
+              x: [0, 40, 0],
+              y: [0, -20, 0],
+            }}
+            transition={{
+              duration: 12,
+              repeat: Infinity,
+            }}
+            className="absolute top-10 left-10 w-72 h-72 bg-cyan-300/30 rounded-full blur-3xl"
+          />
+
+          <motion.div
+            animate={{
+              x: [0, -30, 0],
+              y: [0, 30, 0],
+            }}
+            transition={{
+              duration: 10,
+              repeat: Infinity,
+            }}
+            className="absolute bottom-0 right-0 w-72 h-72 bg-blue-300/30 rounded-full blur-3xl"
+          />
         </div>
 
         <Sidebar />
 
         <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative overflow-y-auto custom-scrollbar">
-          {/* Bagian Bar Atas */}
+
+          {/* Header */}
           <header className="flex flex-col sm:flex-row justify-between sm:justify-end gap-3 mb-8">
-            <motion.button whileHover={{ scale: 1.05 }} className="bg-white/70 backdrop-blur-xl px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md">
-              <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] text-white font-bold">Z</div>
+
+            <motion.button
+              whileHover={{
+                scale: 1.05,
+              }}
+              className="bg-white/70 backdrop-blur-xl px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md"
+            >
+              <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] text-white font-bold">
+                Z
+              </div>
               Zentrix Pool
             </motion.button>
 
             <motion.button
               onClick={handleWalletAction}
-              whileHover={{ scale: 1.05 }}
-              className={`px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border shadow-md cursor-pointer transition-all ${
-                walletAddress ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-700 hover:from-emerald-100 hover:to-teal-100" : "bg-white/70 border-white text-[#1A1A1A] hover:bg-white"
+              whileHover={{
+                scale: 1.05,
+              }}
+              className={`px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border shadow-md ${
+                walletAddress
+                  ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-700"
+                  : "bg-white/70 border-white"
               }`}
             >
-              <Wallet size={16} className={walletAddress ? "text-emerald-600" : ""} />
-              {walletAddress ? `${formatAddress(walletAddress)}` : "Connect Wallet"}
+              <Wallet size={16} />
+              {walletAddress
+                ? formatAddress(
+                    walletAddress
+                  )
+                : "Connect Wallet"}
             </motion.button>
           </header>
 
-          {/* Dashboard Pool Utama */}
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto bg-white/70 backdrop-blur-2xl rounded-[32px] p-5 sm:p-8 border border-white shadow-2xl">
-            
-            {/* Judul & Tombol Tambah Likuiditas Utama */}
+          {/* Content */}
+          <motion.div
+            initial={{
+              opacity: 0,
+              y: 30,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
+            className="w-full max-w-5xl mx-auto bg-white/70 backdrop-blur-2xl rounded-[32px] p-5 sm:p-8 border border-white shadow-2xl"
+          >
+
+            {/* Title */}
             <div className="flex flex-col lg:flex-row gap-6 lg:items-center lg:justify-between mb-10">
+
               <div>
-                <h2 className="text-3xl font-bold flex items-center gap-3"><Droplets className="text-blue-500" />Liquidity Pools</h2>
-                <p className="text-gray-500 mt-3 text-sm sm:text-base">Provide liquidity to earn trading fees and passive rewards.</p>
+                <h2 className="text-3xl font-bold flex items-center gap-3">
+                  <Droplets className="text-blue-500" />
+                  Liquidity Pools
+                </h2>
+
+                <p className="text-gray-500 mt-3 text-sm sm:text-base">
+                  Provide liquidity to earn
+                  trading fees and passive
+                  rewards.
+                </p>
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.96 }}
-                onClick={() => !walletAddress ? handleWalletAction() : handleOpenGeneralModal()}
-                className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg cursor-pointer"
+                whileHover={{
+                  scale: 1.05,
+                }}
+                whileTap={{
+                  scale: 0.96,
+                }}
+                onClick={() =>
+                  !walletAddress
+                    ? handleWalletAction()
+                    : handleOpenGeneralModal()
+                }
+                className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-6 py-4 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg"
               >
-                <Plus size={20} />Add Liquidity
+                <Plus size={20} />
+                Add Liquidity
               </motion.button>
             </div>
 
-            {/* BARIS UTAMA: 3 Grid Box Indikator Statistik (DIKEMBALIKAN SESUAI GAMBAR) */}
+            {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-              <motion.div whileHover={{ y: -5 }} className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
-                <div className="flex items-center justify-between mb-5">
-                  <TrendingUp className="text-green-500" />
-                  <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-xl">+12%</span>
-                </div>
-                <h3 className="text-gray-500 text-sm mb-2">Total APR</h3>
-                <motion.p key={globalStats.apr} className="text-3xl font-bold">{globalStats.apr.toFixed(1)}%</motion.p>
-              </motion.div>
 
-              <motion.div whileHover={{ y: -5 }} className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
-                <div className="flex items-center justify-between mb-5">
-                  <Coins className="text-yellow-500" />
-                </div>
-                <h3 className="text-gray-500 text-sm mb-2">Total Liquidity</h3>
-                <motion.p key={globalStats.tvl} className="text-3xl font-bold">
-                  ${globalStats.tvl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </motion.p>
-              </motion.div>
+              <div className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
+                <TrendingUp className="text-green-500 mb-4" />
+                <h3 className="text-gray-500 text-sm mb-2">
+                  Total APR
+                </h3>
+                <p className="text-3xl font-bold">
+                  {globalStats.apr.toFixed(
+                    1
+                  )}
+                  %
+                </p>
+              </div>
 
-              <motion.div whileHover={{ y: -5 }} className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
-                <div className="flex items-center justify-between mb-5">
-                  <Droplets className="text-cyan-500" />
-                </div>
-                <h3 className="text-gray-500 text-sm mb-2">Your Pools</h3>
-                <motion.p key={globalStats.activePositions} className="text-3xl font-bold">{globalStats.activePositions}</motion.p>
-              </motion.div>
+              <div className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
+                <Coins className="text-yellow-500 mb-4" />
+                <h3 className="text-gray-500 text-sm mb-2">
+                  Total Liquidity
+                </h3>
+                <p className="text-3xl font-bold">
+                  $
+                  {globalStats.tvl.toLocaleString()}
+                </p>
+              </div>
+
+              <div className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
+                <Droplets className="text-cyan-500 mb-4" />
+                <h3 className="text-gray-500 text-sm mb-2">
+                  Your Pools
+                </h3>
+                <p className="text-3xl font-bold">
+                  {activePoolsCount}
+                </p>
+              </div>
+
             </div>
 
-            {/* GRID SHORTCUT TOMBOL PASANGAN TOKEN (DENGAN KLIK SINKRON) */}
+            {/* Token Pool List - USDT dan MJK dihapus */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
-              {pools.slice(0, 8).map(pool => (
-                <motion.div
-                  key={`${pool.token1}_${pool.token2}`}
-                  whileHover={{ y: -2 }}
-                  onClick={() => handleShortcutClick(pool.token1, pool.token2)} // AKTIFKAN FUNGSIONALITAS SHORTCUT KLIK
-                  className="bg-white/60 rounded-2xl p-5 border border-white text-center cursor-pointer hover:shadow-md transition-all"
-                >
-                  <p className="font-bold text-sm text-gray-800">{pool.token1}/{pool.token2}</p>
-                  <p className="text-xs text-gray-500 mt-1">Ratio: {pool.ratio.toFixed(2)}</p>
-                </motion.div>
-              ))}
+
+              {pools
+                .filter((pool: any) => pool.token !== 'USDT' && pool.token !== 'MJK')
+                .map((pool: any) => (
+                  <motion.div
+                    key={pool.id}
+                    whileHover={{
+                      y: -2,
+                    }}
+                    onClick={() =>
+                      handleShortcutClick(
+                        pool.token
+                      )
+                    }
+                    className="bg-white/60 rounded-2xl p-5 border border-white text-center cursor-pointer hover:shadow-md transition-all"
+                  >
+                    <p className="font-bold text-sm text-gray-800">
+                      {pool.token}
+                    </p>
+
+                    <p className="text-xs text-gray-500 mt-1">
+                      Liquidity Pool
+                    </p>
+                  </motion.div>
+                ))}
+
             </div>
 
-            {/* Bagian Daftar Posisi Aktif */}
-            <div className="mt-4 pt-2">
-              {loading ? (
-                <div className="space-y-5 animate-pulse">
-                  <div className="h-24 rounded-3xl bg-gray-200"></div>
-                </div>
-              ) : activePoolsCount > 0 ? (
-                // Tambahkan property walletAddress di sini
-                <PoolCard positions={userPositions} walletAddress={walletAddress} /> 
-                ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="h-56 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center justify-center text-gray-400 font-medium bg-[#F8F9FA]/60"
-                >
-                  <Droplets size={42} className="mb-4 text-gray-300" />
-                  <p className="text-center text-sm sm:text-base">Anda belum memiliki posisi likuiditas aktif. Mulai dengan menambahkan likuiditas!</p>
-                </motion.div>
-              )}
-            </div>
+            {/* Pool Card */}
+            {loading ? (
+              <div className="h-24 rounded-3xl bg-gray-200 animate-pulse" />
+            ) : (
+              <PoolCard
+                positions={userPositions}
+              />
+            )}
 
-            {/* Histori Transaksi */}
-            <LiquidityHistory history={history} walletAddress={walletAddress} />
+            {/* History */}
+            <LiquidityHistory
+              history={history}
+              walletAddress={
+                walletAddress
+              }
+            />
           </motion.div>
         </main>
       </div>
 
-      {/* Modal Jendela Pop-up */}
       <AddLiquidityModal
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);
-          if (walletAddress) loadLiquidityData(walletAddress);
+
+          if (walletAddress) {
+            loadLiquidityData(
+              walletAddress
+            );
+          }
         }}
         walletAddress={walletAddress}
         onSuccess={() => {
-          if (walletAddress) loadLiquidityData(walletAddress);
+          if (walletAddress) {
+            loadLiquidityData(
+              walletAddress
+            );
+          }
         }}
-        defaultPool={selectedShortcut} // SINKRONISASI SHORTCUT TOKEN SELEKTOR KE FORM MODAL INPUT
+        defaultPool={selectedShortcut}
       />
     </PageTransition>
   );

@@ -1,7 +1,20 @@
-import React, { useState, useEffect, useRef } from "react";
-import { X, ArrowDown, Info, ChevronDown } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  X,
+  ArrowDown,
+  Info,
+  ChevronDown,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { fetchAllTokenBalances, executeAddLiquidity, getAllPools, addLiquidityHistory } from "../services/poolService";
+import {
+  fetchAllTokenBalances,
+  executeAddLiquidity,
+  getAllPools,
+  addLiquidityHistory,
+} from "../services/poolService";
 
 interface AddLiquidityModalProps {
   isOpen: boolean;
@@ -9,6 +22,16 @@ interface AddLiquidityModalProps {
   walletAddress: string;
   onSuccess: () => void;
   defaultPool?: string;
+}
+
+interface PoolOption {
+  id: string;
+  token: string;
+}
+
+interface TxStatusState {
+  type: "processing" | "success" | "error";
+  message: string;
 }
 
 const getTokenColor = (symbol: string): string => {
@@ -23,108 +46,168 @@ const getTokenColor = (symbol: string): string => {
   return colors[symbol] || "bg-gray-500";
 };
 
-const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  walletAddress, 
+const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
+  isOpen,
+  onClose,
+  walletAddress,
   onSuccess,
-  defaultPool = "USDT_ZTX"
+  defaultPool = "USDT",
 }) => {
-  const [selectedPool, setSelectedPool] = useState(defaultPool);
-  const [amount1, setAmount1] = useState("");
-  const [amount2, setAmount2] = useState("");
+  const pools = useMemo<PoolOption[]>(() => getAllPools() as PoolOption[], []);
+  const [selectedToken, setSelectedToken] = useState<string>(defaultPool);
+  const [amount, setAmount] = useState<string>("");
   const [balances, setBalances] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [txStatus, setTxStatus] = useState<TxStatusState | null>(null);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const pools = getAllPools();
-  const currentPool = pools.find(p => `${p.token1}_${p.token2}` === selectedPool) || pools[0];
+  const currentPool =
+    pools.find((p) => p.id === selectedToken || p.token === selectedToken) ||
+    pools[0];
 
   useEffect(() => {
-    setSelectedPool(defaultPool);
+    setSelectedToken((prev) =>
+      prev !== defaultPool ? defaultPool : prev
+    );
   }, [defaultPool]);
+
+  const refreshBalances = async () => {
+    if (walletAddress && isOpen) {
+      try {
+        const updated = await fetchAllTokenBalances(walletAddress);
+        setBalances(updated);
+      } catch (err) {
+        console.error("Gagal mengambil saldo terbaru:", err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) {
+      setTxStatus(null);
+      setIsDropdownOpen(false);
+      return;
+    }
+    refreshBalances();
+  }, [walletAddress, isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsDropdownOpen(false);
       }
     };
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (isOpen && walletAddress) {
-      fetchAllTokenBalances(walletAddress).then(setBalances);
-    }
-  }, [isOpen, walletAddress]);
-
-  const handleAmount1Change = (val: string) => {
-    setAmount1(val);
-    if (!val || isNaN(Number(val))) {
-      setAmount2("");
-    } else {
-      setAmount2((Number(val) * currentPool.ratio).toFixed(4));
-    }
+  const handleAmountChange = (val: string) => {
+    setAmount(val);
   };
 
-  const handleAmount2Change = (val: string) => {
-    setAmount2(val);
-    if (!val || isNaN(Number(val))) {
-      setAmount1("");
-    } else {
-      setAmount1((Number(val) / currentPool.ratio).toFixed(4));
-    }
+  const handleSelectToken = (token: string) => {
+    setSelectedToken(token);
+    setIsDropdownOpen(false);
+    setAmount("");
+    setTxStatus(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!walletAddress || !amount1 || !amount2) return;
 
-    const bal1 = Number(balances[currentPool.token1] || 0);
-    const bal2 = Number(balances[currentPool.token2] || 0);
+    if (!walletAddress || !selectedToken || !amount) return;
 
-    if (Number(amount1) > bal1 || Number(amount2) > bal2) {
-      alert(`Saldo Anda tidak mencukupi untuk menambahkan likuiditas pada pool ini.`);
+    const balance = Number(balances[selectedToken] || 0);
+    const amountNumber = Number(amount);
+
+    if (Number.isNaN(amountNumber) || amountNumber <= 0) {
+      setTxStatus({
+        type: "error",
+        message: "Nominal likuiditas harus lebih dari 0.",
+      });
+      return;
+    }
+
+    if (amountNumber > balance) {
+      setTxStatus({
+        type: "error",
+        message: `Saldo ${selectedToken} Anda tidak mencukupi untuk melakukan penyetoran likuiditas ini.`,
+      });
       return;
     }
 
     setIsSubmitting(true);
+    setTxStatus({
+      type: "processing",
+      message:
+        "Menunggu konfirmasi tanda tangan/approval transaksi di dompet MetaMask Anda...",
+    });
+
     try {
-      // PERBAIKAN: Mengirim string langsung (amount1 & amount2) tanpa Number()
-      // agar ethers.parseEther() di poolService tidak error INVALID_ARGUMENT
       const res = await executeAddLiquidity(
         walletAddress,
-        currentPool.token1,
-        currentPool.token2,
-        amount1, 
-        amount2  
+        selectedToken,
+        amount
       );
 
       if (res && res.hash) {
-        // Di sini tetap menggunakan Number() karena fungsi addLiquidityHistory membutuhkan format angka
         addLiquidityHistory(
           walletAddress,
-          currentPool.token1,
-          currentPool.token2,
-          Number(amount1),
-          Number(amount2),
+          selectedToken,
+          amountNumber,
           res.hash
         );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses menambahkan likuiditas!\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+
         alert("Likuiditas Berhasil Ditambahkan ke Pool!");
-        setAmount1("");
-        setAmount2("");
+        setAmount("");
+
+        await refreshBalances();
         onSuccess();
         onClose();
       } else {
-        alert("Gagal mengeksekusi penambahan dana.");
+        setTxStatus({
+          type: "error",
+          message: "Gagal mengeksekusi penambahan dana ke smart contract.",
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Terjadi kesalahan sistem saat transaksi.");
+
+      if (error?.code === "ACTION_REJECTED") {
+        setTxStatus({
+          type: "error",
+          message:
+            "Transaksi ditolak atau dibatalkan oleh pengguna di dalam MetaMask.",
+        });
+      } else if (error?.message?.includes("insufficient funds")) {
+        setTxStatus({
+          type: "error",
+          message:
+            "Dana (Gas fee ETH / Sepolia) tidak mencukupi di dompet Anda untuk membayar biaya transaksi.",
+        });
+      } else {
+        setTxStatus({
+          type: "error",
+          message:
+            error?.reason ||
+            error?.message ||
+            "Terjadi kesalahan sistem saat memproses transaksi pada EVM Smart Contract.",
+        });
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -135,11 +218,11 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-gray-900/40 backdrop-blur-sm"
+          className="absolute inset-0 bg-gray-900/40 backdrop-blur-md"
           onClick={onClose}
         />
 
@@ -147,48 +230,58 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
           initial={{ opacity: 0, scale: 0.95, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          className="bg-white rounded-[32px] w-full max-w-md p-6 shadow-2xl relative border border-gray-100 z-10"
+          className="bg-white rounded-[32px] w-full max-w-md p-6 shadow-2xl relative border border-gray-100 z-10 max-h-[95vh] flex flex-col"
         >
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-6 shrink-0">
             <div>
-              <h3 className="text-xl font-extrabold text-gray-800">Add Liquidity</h3>
-              <p className="text-xs text-gray-400 font-medium mt-0.5">Setor dana untuk mendapatkan trading fee</p>
+              <h3 className="text-xl font-extrabold text-gray-800">
+                Add Liquidity
+              </h3>
+              <p className="text-xs text-gray-400 font-medium mt-0.5">
+                Setor dana untuk mendapatkan trading fee
+              </p>
             </div>
-            <button 
+            <button
               type="button"
-              onClick={onClose} 
+              onClick={onClose}
               className="p-2 text-gray-400 hover:text-gray-700 bg-gray-50 rounded-xl transition-colors cursor-pointer"
             >
               <X size={18} />
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            
-            {/* Custom Dropdown Pool Pair */}
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-4 overflow-y-auto flex-1 pr-1 custom-scrollbar"
+          >
             <div className="space-y-1.5" ref={dropdownRef}>
               <label className="text-xs font-bold text-gray-400 uppercase tracking-wide px-1">
-                Select Pair Pool
+                Select Token
               </label>
+
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  onClick={() => setIsDropdownOpen((prev) => !prev)}
                   disabled={isSubmitting}
                   className="w-full flex items-center justify-between bg-gray-50/70 border border-gray-200/80 p-3.5 rounded-2xl shadow-sm text-sm font-bold text-gray-800 hover:bg-gray-100/50 transition-all text-left cursor-pointer disabled:opacity-50"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex -space-x-2">
-                      <div className={`w-5 h-5 rounded-full ${getTokenColor(currentPool.token1)} border border-white flex items-center justify-center text-[8px] font-bold text-white`}>
-                        {currentPool.token1[0]}
-                      </div>
-                      <div className={`w-5 h-5 rounded-full ${getTokenColor(currentPool.token2)} border border-white flex items-center justify-center text-[8px] font-bold text-white`}>
-                        {currentPool.token2[0]}
-                      </div>
+                    <div className="w-6 h-6 rounded-full bg-gray-100 border border-white flex items-center justify-center">
+                      <div
+                        className={`w-4 h-4 rounded-full ${getTokenColor(
+                          currentPool?.token || selectedToken
+                        )}`}
+                      />
                     </div>
-                    <span>{currentPool.token1} / {currentPool.token2} Pool</span>
+                    <span>{currentPool?.token || selectedToken}</span>
                   </div>
-                  <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    size={16}
+                    className={`text-gray-400 transition-transform duration-200 ${
+                      isDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 </button>
 
                 <AnimatePresence>
@@ -197,37 +290,33 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
                       initial={{ opacity: 0, y: -8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      className="absolute left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 p-1 max-h-60 overflow-y-auto"
+                      className="absolute left-0 right-0 mt-2 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 p-1 max-h-48 overflow-y-auto"
                     >
-                      {pools.map((p) => {
-                        const poolKey = `${p.token1}_${p.token2}`;
-                        const isSelected = selectedPool === poolKey;
+                      {pools.map((p, idx) => {
+                        const isSelected =
+                          currentPool?.id === p.id || selectedToken === p.token;
+
                         return (
                           <button
-                            key={poolKey}
+                            key={`${p.id}_${idx}`}
                             type="button"
-                            onClick={() => {
-                              setSelectedPool(poolKey);
-                              setIsDropdownOpen(false);
-                              setAmount1("");
-                              setAmount2("");
-                            }}
+                            onClick={() => handleSelectToken(p.token)}
                             className={`flex items-center justify-between w-full px-4 py-3 rounded-xl text-xs font-bold transition-all ${
-                              isSelected ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
+                              isSelected
+                                ? "bg-blue-50 text-blue-600"
+                                : "text-gray-700 hover:bg-gray-50"
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <div className="flex -space-x-2">
-                                <div className={`w-4 h-4 rounded-full ${getTokenColor(p.token1)} flex items-center justify-center text-[7px] font-bold text-white`}>
-                                  {p.token1[0]}
-                                </div>
-                                <div className={`w-4 h-4 rounded-full ${getTokenColor(p.token2)} flex items-center justify-center text-[7px] font-bold text-white`}>
-                                  {p.token2[0]}
-                                </div>
+                              <div
+                                className={`w-4 h-4 rounded-full ${getTokenColor(
+                                  p.token
+                                )} flex items-center justify-center text-[7px] font-bold text-white`}
+                              >
+                                {p.token[0]}
                               </div>
-                              <span>{p.token1} / {p.token2}</span>
+                              <span>{p.token}</span>
                             </div>
-                            <span className="text-[10px] text-gray-400 font-normal">Ratio: {p.ratio.toFixed(2)}</span>
                           </button>
                         );
                       })}
@@ -237,73 +326,91 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
               </div>
             </div>
 
-            {/* Input Token 1 */}
             <div className="bg-gray-50 border border-gray-100 p-4 rounded-2xl">
               <div className="flex justify-between text-xs text-gray-400 font-bold mb-2">
                 <span>Input Amount</span>
-                <span>Balance: {balances[currentPool.token1] || "0.00"}</span>
+                <span>
+                  Balance:{" "}
+                  <span className="text-gray-700 font-black">
+                    {balances[currentPool?.token || selectedToken] || "0.00"}
+                  </span>
+                </span>
               </div>
+
               <div className="flex items-center justify-between gap-3">
                 <input
                   type="number"
+                  step="any"
                   placeholder="0.0"
-                  className="bg-transparent text-xl font-black text-gray-800 outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:margin-0 [&::-webkit-inner-spin-button]:margin-0"
-                  value={amount1}
-                  onChange={(e) => handleAmount1Change(e.target.value)}
+                  className="bg-transparent text-xl font-black text-gray-800 outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  value={amount}
+                  onChange={(e) => handleAmountChange(e.target.value)}
                   disabled={isSubmitting}
                 />
                 <span className="bg-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm border border-gray-100 text-gray-700">
-                  {currentPool.token1}
+                  {currentPool?.token || selectedToken}
                 </span>
               </div>
             </div>
 
-            {/* Separator icon */}
-            <div className="flex justify-center -my-2 relative z-10">
-              <div className="bg-white border border-gray-100 p-2 rounded-full shadow-sm text-gray-400">
-                <ArrowDown size={14} />
-              </div>
-            </div>
-
-            {/* Input Token 2 */}
-            <div className="bg-gray-50 border border-gray-100 p-4 rounded-2xl">
-              <div className="flex justify-between text-xs text-gray-400 font-bold mb-2">
-                <span>Input Amount (Estimated)</span>
-                <span>Balance: {balances[currentPool.token2] || "0.00"}</span>
-              </div>
-              <div className="flex items-center justify-between gap-3">
-                <input
-                  type="number"
-                  placeholder="0.0"
-                  className="bg-transparent text-xl font-black text-gray-800 outline-none w-full [appearance:textfield] [&::-webkit-outer-spin-button]:margin-0 [&::-webkit-inner-spin-button]:margin-0"
-                  value={amount2}
-                  onChange={(e) => handleAmount2Change(e.target.value)}
-                  disabled={isSubmitting}
-                />
-                <span className="bg-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm border border-gray-100 text-gray-700">
-                  {currentPool.token2}
-                </span>
-              </div>
-            </div>
-
-            {/* Info Box */}
             <div className="bg-blue-50/50 p-3.5 rounded-2xl text-[11px] text-blue-700 font-medium flex gap-2 border border-blue-100/50">
-              <Info size={16} className="shrink-0 mt-0.5" />
+              <Info size={16} className="shrink-0 mt-0.5 text-blue-500" />
               <div>
-                <p>Pool Ratio: 1 {currentPool.token1} = {currentPool.ratio.toFixed(2)} {currentPool.token2}</p>
-                <p className="text-gray-400 mt-0.5">Dengan menyetor likuiditas, Anda akan mendapatkan bonus bagi hasil fee trading.</p>
+                <p className="font-bold">
+                  Token Pool: {currentPool?.token || selectedToken}
+                </p>
+                <p className="text-gray-400 mt-0.5 font-normal">
+                  Dengan menyetor likuiditas, Anda akan mendapatkan bonus bagi
+                  hasil fee trading.
+                </p>
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-4 rounded-2xl font-bold text-base shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+              disabled={isSubmitting || !amount}
+              className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-4 rounded-2xl font-bold text-base shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
             >
-              {isSubmitting ? "Processing..." : "Supply & Provide Funds"}
+              {isSubmitting ? "Executing Transaction..." : "Supply & Provide Funds"}
             </button>
           </form>
+
+          <AnimatePresence>
+            {txStatus && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className={`mt-4 p-3.5 rounded-2xl flex items-start gap-2.5 border text-xs leading-relaxed shrink-0 ${
+                  txStatus.type === "processing"
+                    ? "bg-blue-50 border-blue-100 text-blue-700"
+                    : txStatus.type === "success"
+                    ? "bg-emerald-50 border-emerald-100 text-emerald-800"
+                    : "bg-red-50 border-red-100 text-red-700"
+                }`}
+              >
+                {txStatus.type === "processing" ? (
+                  <Loader2
+                    size={15}
+                    className="animate-spin shrink-0 text-blue-500 mt-0.5"
+                  />
+                ) : txStatus.type === "success" ? (
+                  <CheckCircle2
+                    size={15}
+                    className="shrink-0 text-emerald-600 mt-0.5"
+                  />
+                ) : (
+                  <AlertCircle
+                    size={15}
+                    className="shrink-0 text-red-500 mt-0.5"
+                  />
+                )}
+                <div className="whitespace-pre-line break-all">
+                  {txStatus.message}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     </AnimatePresence>

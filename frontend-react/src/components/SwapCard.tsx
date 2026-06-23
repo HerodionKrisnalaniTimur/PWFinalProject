@@ -61,6 +61,7 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
     loadBalances();
   }, [loadBalances]);
 
+  // PERBAIKAN UTAMA: Sinkronisasi kalkulasi konversi rate live pool
   const updateRate = useCallback(async (amount: string, from: string, to: string) => {
     if (!amount || parseFloat(amount) <= 0) {
       setToAmount("");
@@ -68,10 +69,20 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
     }
     setLoadingRate(true);
     try {
-      const rate = await fetchLiveTokenRate(from, to, parseFloat(amount));
-      setToAmount(rate.toFixed(4));
+      // 1. Ambil rate masing-masing token secara on-chain terpisah sesuai aturan swapService
+      const rateFrom = await fetchLiveTokenRate(from);
+      const rateTo = await fetchLiveTokenRate(to);
+      
+      if (rateTo > 0) {
+        // 2. Terapkan rumus konversi multi-token: (Jumlah Input * Rate Asal) / Rate Tujuan
+        const estimatedAmount = (parseFloat(amount) * rateFrom) / rateTo;
+        setToAmount(estimatedAmount.toFixed(4));
+      } else {
+        setToAmount("0.0000");
+      }
     } catch (e) {
-      console.error(e);
+      console.error("Gagal sinkronisasi kalkulasi konversi:", e);
+      setToAmount("");
     } finally {
       setLoadingRate(false);
     }
@@ -102,11 +113,9 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
     setTxStatus({ type: "processing", message: `Swapping ${fromAmount} ${fromToken} to ${toToken}...` });
 
     try {
-      // 1. Memanggil swapService dengan parameter 3 string (tanpa walletAddress)
+      // Memanggil swapService dengan parameter yang sesuai
       await executeOnChainMultiSwap(fromToken, toToken, fromAmount);
       
-      // 2. Jika eksekusi berhasil melewati fungsi di atas tanpa melemparkan error,
-      //    maka status swap langsung diubah ke sukses.
       setTxStatus({ 
         type: "success", 
         message: `Berhasil Swap! Transaksi Anda telah dikonfirmasi` 

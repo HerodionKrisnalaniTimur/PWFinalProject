@@ -20,6 +20,8 @@ contract SimpleSwap {
     // Mapping untuk melacak setoran likuiditas per user per token
     mapping(address => mapping(address => uint256)) public liquidityPool;
 
+    mapping(address => uint256) public totalLiquidity;
+
     constructor(address _tokenUSDT) {
         tokenUSDT = _tokenUSDT;
         owner = msg.sender;
@@ -41,15 +43,36 @@ contract SimpleSwap {
     }
 
     // Fungsi Universal untuk menambahkan likuiditas koin apa saja ke dalam Pool
-    function addLiquidity(address tokenAddress, uint256 amount) external returns (bool) {
-        require(isSupportedToken[tokenAddress], "Token tidak didukung");
-        require(amount > 0, "Nominal harus lebih dari 0");
+    function addLiquidity(
+    address tokenAddress,
+    uint256 amount
+        ) external returns (bool) {
 
-        require(IERC20(tokenAddress).transferFrom(msg.sender, address(this), amount), "Transfer ke pool gagal");
-        liquidityPool[msg.sender][tokenAddress] += amount;
-        
-        return true;
-    }
+            require(
+                isSupportedToken[tokenAddress],
+                "Token tidak didukung"
+            );
+
+            require(
+                amount > 0,
+                "Nominal harus lebih dari 0"
+            );
+
+            require(
+                IERC20(tokenAddress).transferFrom(
+                    msg.sender,
+                    address(this),
+                    amount
+                ),
+                "Transfer ke pool gagal"
+            );
+
+            liquidityPool[msg.sender][tokenAddress] += amount;
+
+            totalLiquidity[tokenAddress] += amount;
+
+            return true;
+        }
 
     // FUNGSI INTI: Multi-Token Cross Swap (Bisa Swap MJK ke AGT, ZTX ke USDT, dll)
     function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
@@ -71,5 +94,49 @@ contract SimpleSwap {
 
         // Kirim koin hasil swap ke dompet user
         require(IERC20(tokenOut).transfer(msg.sender, amountOut), "Gagal mengirimkan koin hasil swap");
+    }
+
+    function removeLiquidity(
+    address tokenAddress,
+    uint256 amount
+    ) external {
+
+        require(
+            liquidityPool[msg.sender][tokenAddress] >= amount,
+            "Liquidity tidak cukup"
+        );
+
+        liquidityPool[msg.sender][tokenAddress] -= amount;
+
+        totalLiquidity[tokenAddress] -= amount;
+
+        require(
+            IERC20(tokenAddress).transfer(
+                msg.sender,
+                amount
+            ),
+            "Transfer gagal"
+        );
+    }
+
+    function getUserLiquidity(
+    address user,
+            address token
+        )
+            external
+            view
+            returns(uint256)
+        {
+            return liquidityPool[user][token];
+        }
+
+    function getPoolLiquidity(
+    address token
+    )
+        external
+        view
+        returns(uint256)
+    {
+        return totalLiquidity[token];
     }
 }

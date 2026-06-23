@@ -1,260 +1,329 @@
 import { ethers } from "ethers";
 
-// 1. Konfigurasi Alamat Smart Contract Baru (Sesuaikan dengan hasil deploy terminal Anda)
+// 1. Konfigurasi Alamat Smart Contract
 export const CONTRACT_ADDRESSES = {
-  POOL_CONTRACT: "0x9a641d12C1FC04ee79Ebd50C7AfD69001cdAE325", 
-  TOKEN_USDT: "0x27055F95A340Ec69dC0a828733F29D4ad7B5959C",    
-  TOKEN_ZTX: "0xFf3422DDc623AacD499bb79Af41F9c6dacc4354f",   
-  TOKEN_AGT: "0x246aeaE378f1F70Bb470824146116687d6B7Bdab",   
-  TOKEN_TOG: "0x35309A0593d7E09b22Dfd9D8AC78FC545048d566",   
-  TOKEN_DGH: "0xFE6CAA65C8C9B74C55a2ccf29eDD74B84f49052E",   
-  TOKEN_MJK: "0x16EC03C615a24f2ea44Eb9DACc12E58486b5C7c3",   
+  SWAP_CONTRACT: "0x9a641d12C1FC04ee79Ebd50C7AfD69001cdAE325",
+  POOL_CONTRACT: "0x9a641d12C1FC04ee79Ebd50C7AfD69001cdAE325",
+
+  TOKEN_USDT: "0x27055F95A340Ec69dC0a828733F29D4ad7B5959C",
+  TOKEN_ZTX: "0xFf3422DDc623AacD499bb79Af41F9c6dacc4354f",
+  TOKEN_AGT: "0x246aeaE378f1F70Bb470824146116687d6B7Bdab",
+  TOKEN_TOG: "0x35309A0593d7E09b22Dfd9D8AC78FC545048d566",
+  TOKEN_DGH: "0xFE6CAA65C8C9B74C55a2ccf29eDD74B84f49052E",
+  TOKEN_MJK: "0x16EC03C615a24f2ea44Eb9DACc12E58486b5C7c3",
 };
 
-// 2. Deklarasi ABI Standard yang Diperluas
+// ABI minimal ERC20 lengkap dengan pengecekan desimal dinamis
 export const ERC20_ABI = [
   "function balanceOf(address owner) view returns (uint256)",
+  "function approve(address spender, uint256 amount) returns (bool)",
   "function allowance(address owner, address spender) view returns (uint256)",
-  "function approve(address spender, uint256 amount) returns (bool)"
+  "function decimals() view returns (uint8)"
 ];
 
-// ABI Baru sesuai dengan fungsi kontrak SimpleSwap yang diperbarui
 export const MULTI_POOL_ABI = [
-  "function swap(address tokenIn, address tokenOut, uint256 amountIn) external",
-  "function tokenRates(address tokenAddress) view returns (uint256)",
-  "function isSupportedToken(address tokenAddress) view returns (bool)"
+  "function addLiquidity(address tokenAddress,uint256 amount) external returns(bool)",
+  "function removeLiquidity(address tokenAddress,uint256 amount) external",
+  "function getUserLiquidity(address user,address token) view returns(uint256)",
+  "function getPoolLiquidity(address token) view returns(uint256)",
+  "function isSupportedToken(address tokenAddress) view returns(bool)"
 ];
+
+export interface PoolToken {
+  id: string;
+  token: string;
+}
+
+export interface LiquidityHistoryItem {
+  id: string;
+  type: "add" | "remove";
+
+  token: string;
+  amount: number;
+
+  timestamp: number;
+  txHash?: string;
+}
+
+export const getAllPools = () => {
+  return [
+    {
+      id: "USDT",
+      token: "USDT"
+    },
+    {
+      id: "ZTX",
+      token: "ZTX"
+    },
+    {
+      id: "AGT",
+      token: "AGT"
+    },
+    {
+      id: "TOG",
+      token: "TOG"
+    },
+    {
+      id: "DGH",
+      token: "DGH"
+    },
+    {
+      id: "MJK",
+      token: "MJK"
+    }
+  ];
+};
 
 export const getProviderOrSigner = async (needSigner = false) => {
-  if (typeof window === "undefined" || !window.ethereum) throw new Error("MetaMask belum terinstall");
+  if (typeof window === "undefined" || !window.ethereum) {
+    throw new Error("MetaMask tidak terdeteksi. Silakan instal terlebih dahulu.");
+  }
   const provider = new ethers.BrowserProvider(window.ethereum);
-  if (needSigner) return await provider.getSigner();
+  if (needSigner) {
+    return await provider.getSigner();
+  }
   return provider;
 };
 
-export const fetchAllTokenBalances = async (walletAddress: string) => {
+export const fetchAllTokenBalances = async (walletAddress: string): Promise<Record<string, string>> => {
   try {
     const provider = await getProviderOrSigner();
-
-    // instance contract untuk setiap token
-    const contracts: Record<string, ethers.Contract> = {};
+    const balances: Record<string, string> = {};
     const tokens = ["USDT", "ZTX", "AGT", "TOG", "DGH", "MJK"];
-
-    tokens.forEach((symbol) => {
-      const address = CONTRACT_ADDRESSES[`TOKEN_${symbol}` as keyof typeof CONTRACT_ADDRESSES];
-      if (address) {
-        contracts[symbol] = new ethers.Contract(address, ERC20_ABI, provider);
+    
+    for (const symbol of tokens) {
+      const tokenAddress = CONTRACT_ADDRESSES[`TOKEN_${symbol}` as keyof typeof CONTRACT_ADDRESSES];
+      if (tokenAddress) {
+        const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+        const balWei = await contract.balanceOf(walletAddress);
+        const decimals = await contract.decimals().catch(() => 18);
+        balances[symbol] = parseFloat(ethers.formatUnits(balWei, decimals)).toFixed(2);
       }
-    });
-
-    // Panggil fungsi balanceOf secara paralel untuk menghemat performa network
-    const balancesPromises = tokens.map(async (symbol) => {
-      if (!contracts[symbol]) return { [symbol]: "0.00" };
-      try {
-        const balWei = await contracts[symbol].balanceOf(walletAddress);
-        return { [symbol]: ethers.formatEther(balWei) };
-      } catch {
-        return { [symbol]: "0.00" };
-      }
-    });
-
-    const results = await Promise.all(balancesPromises);
-    return results.reduce((acc, current) => ({ ...acc, ...current }), {});
+    }
+    return balances;
   } catch (error) {
-    console.error("Gagal mengambil saldo multi-token:", error);
+    console.error("Gagal mengambil saldo on-chain:", error);
     return { USDT: "0.00", ZTX: "0.00", AGT: "0.00", TOG: "0.00", DGH: "0.00", MJK: "0.00" };
   }
 };
 
-
-// Definisi semua pool
-const POOL_PAIRS = [
-  { token1: "USDT", token2: "ZTX", ratio: 1.5 },
-  { token1: "USDT", token2: "AGT", ratio: 0.5 },
-  { token1: "USDT", token2: "TOG", ratio: 0.67 },
-  { token1: "USDT", token2: "DGH", ratio: 1.0 },
-  { token1: "USDT", token2: "MJK", ratio: 2.0 },
-  { token1: "ZTX", token2: "AGT", ratio: 0.35 },
-  { token1: "ZTX", token2: "TOG", ratio: 0.45 },
-  { token1: "ZTX", token2: "DGH", ratio: 0.7 },
-  { token1: "ZTX", token2: "MJK", ratio: 1.33 },
-];
-
-export const getAllPools = () => {
-  return POOL_PAIRS;
-};
-
 export const executeAddLiquidity = async (
   walletAddress: string,
-  token1Symbol: string,
-  token2Symbol: string,
-  amount1: string,
-  amount2: string
+  tokenSymbol: string,
+  amount: string
 ) => {
   try {
-    console.log(`Adding liquidity: ${amount1} ${token1Symbol} + ${amount2} ${token2Symbol} from ${walletAddress}`);
-
     const signer = await getProviderOrSigner(true);
-    const poolAddress = CONTRACT_ADDRESSES.POOL_CONTRACT;
 
-    const token1Address = CONTRACT_ADDRESSES[`TOKEN_${token1Symbol}` as keyof typeof CONTRACT_ADDRESSES];
-    const token2Address = CONTRACT_ADDRESSES[`TOKEN_${token2Symbol}` as keyof typeof CONTRACT_ADDRESSES];
+    const poolAddress =
+      CONTRACT_ADDRESSES.POOL_CONTRACT;
 
-    if (!token1Address || !token2Address) throw new Error("Token address not found");
+    const tokenAddress =
+      CONTRACT_ADDRESSES[
+        `TOKEN_${tokenSymbol}` as keyof typeof CONTRACT_ADDRESSES
+      ];
 
-    const token1Contract = new ethers.Contract(token1Address, ERC20_ABI, signer);
-    const token2Contract = new ethers.Contract(token2Address, ERC20_ABI, signer);
+    if (!tokenAddress)
+      throw new Error("Token tidak ditemukan");
 
-    const amount1Wei = ethers.parseEther(amount1);
-    const amount2Wei = ethers.parseEther(amount2);
+    const tokenContract =
+      new ethers.Contract(
+        tokenAddress,
+        ERC20_ABI,
+        signer
+      );
 
-    // Approve token1
-    console.log(`Approving ${amount1} ${token1Symbol}...`);
-    let tx = await token1Contract.approve(poolAddress, amount1Wei);
+    const decimals =
+      await tokenContract.decimals().catch(
+        () => 18
+      );
+
+    const amountWei =
+      ethers.parseUnits(amount, decimals);
+
+    console.log(
+      `Approving ${amount} ${tokenSymbol}`
+    );
+
+    const approveTx =
+      await tokenContract.approve(
+        poolAddress,
+        amountWei
+      );
+
+    await approveTx.wait();
+
+    const poolContract =
+      new ethers.Contract(
+        poolAddress,
+        MULTI_POOL_ABI,
+        signer
+      );
+
+    console.log(
+      "Mengirim likuiditas..."
+    );
+
+    const tx =
+      await poolContract.addLiquidity(
+        tokenAddress,
+        amountWei
+      );
+
     await tx.wait();
 
-    // Approve token2
-    console.log(`Approving ${amount2} ${token2Symbol}...`);
-    tx = await token2Contract.approve(poolAddress, amount2Wei);
-    await tx.wait();
-
-    // TODO: Call addLiquidity function on smart contract when available
-    console.log("Liquidity added successfully (mock)");
-    return { hash: `0x${Date.now().toString(16)}` };
-  } catch (error: any) {
-    console.error("Add liquidity error:", error);
+    return {
+      hash: tx.hash
+    };
+  } catch (error) {
+    console.error(error);
     throw error;
   }
 };
+    
 
-export const fetchUserLiquidity = async (walletAddress: string) => {
+export const getLiquidityHistory = (
+  walletAddress: string
+): LiquidityHistoryItem[] => {
   try {
-    console.log(`Fetching user liquidity for ${walletAddress}`);
-    // Mock data - akan di-update dengan data real dari smart contract
-    const pairs = getAllPools();
-    const liquidity: Record<string, { token1: string; token2: string; amount1: number; amount2: number }> = {};
+    const data = localStorage.getItem(
+      `liquidity_history_${walletAddress.toLowerCase()}`
+    );
 
-    pairs.forEach((pair) => {
-      const key = `${pair.token1}_${pair.token2}`;
-      liquidity[key] = {
-        token1: pair.token1,
-        token2: pair.token2,
-        amount1: 0,
-        amount2: 0
-      };
-    });
+    if (!data) return [];
 
-    return liquidity;
+    const parsed = JSON.parse(data);
+
+    return parsed.filter(
+      (item: any) =>
+        item &&
+        typeof item.token === "string" &&
+        typeof item.amount === "number"
+    );
   } catch (error) {
-    console.error("Fetch user liquidity error:", error);
-    return {};
-  }
-};
-
-export const fetchGlobalPoolStats = async () => {
-  console.log("Fetching global pool stats");
-  return { tvl: 0, apr: 24.8 };
-};
-
-// History Management Functions
-export interface LiquidityHistoryItem {
-  id: string;
-  token1: string;
-  token2: string;
-  amount1: number;
-  amount2: number;
-  type: "add" | "remove";
-  timestamp: string;
-  txHash?: string;
-}
-
-export const getLiquidityHistory = (walletAddress: string): LiquidityHistoryItem[] => {
-  if (typeof window === "undefined") return [];
-  try {
-    const history = localStorage.getItem(`liquidity_history_${walletAddress}`);
-    return history ? JSON.parse(history) : [];
-  } catch {
+    console.error(error);
     return [];
   }
 };
 
 export const addLiquidityHistory = (
   walletAddress: string,
-  token1: string,
-  token2: string,
-  amount1: number,
-  amount2: number,
+  token: string,
+  amount: number,
   txHash?: string
 ) => {
-  if (typeof window === "undefined") return;
   try {
     const history = getLiquidityHistory(walletAddress);
     const newItem: LiquidityHistoryItem = {
-      id: Date.now().toString(),
-      token1,
-      token2,
-      amount1,
-      amount2,
+      id: `liq_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       type: "add",
-      timestamp: new Date().toLocaleString("id-ID", { hour12: false }),
+      token,
+      amount,
+      timestamp: Date.now(),
       txHash,
     };
-    const updated = [newItem, ...history];
-    localStorage.setItem(`liquidity_history_${walletAddress}`, JSON.stringify(updated));
-    window.dispatchEvent(new Event("liquidity_history_updated"));
+    history.unshift(newItem);
+    localStorage.setItem(`liquidity_history_${walletAddress.toLowerCase()}`, JSON.stringify(history));
+    return newItem;
   } catch (error) {
-    console.error("Error saving liquidity history:", error);
+    console.error("Error adding liquidity to history:", error);
   }
+  
 };
 
-export const calculateTotalStats = (walletAddress: string) => {
+export const calculateTotalStats = (
+  walletAddress: string
+) => {
   try {
-    const history = getLiquidityHistory(walletAddress);
+    const history =
+      getLiquidityHistory(walletAddress);
+
     let tvl = 0;
-    let totalPairs = new Set<string>();
+
+    const activeTokens =
+      new Set<string>();
 
     history.forEach((item) => {
-      if (item.type === "add") {
-        tvl += item.amount1 + item.amount2;
-        totalPairs.add(`${item.token1}_${item.token2}`);
+      if (
+        item.type === "add" &&
+        typeof item.amount === "number"
+      ) {
+        tvl += Number(item.amount);
+
+        activeTokens.add(item.token);
       }
     });
 
     return {
-      tvl: tvl,
+      tvl,
       apr: 24.8,
-      activePositions: totalPairs.size,
+      activePositions:
+        activeTokens.size,
     };
   } catch (error) {
-    console.error("Error calculating stats:", error);
-    return { tvl: 0, apr: 24.8, activePositions: 0 };
+    return {
+      tvl: 0,
+      apr: 24.8,
+      activePositions: 0,
+    };
   }
 };
 
 export const getUserPositionsFromHistory = (
   walletAddress: string
-): Record<string, { token1: string; token2: string; amount1: number; amount2: number }> => {
+): Record<
+  string,
+  {
+    token: string;
+    amount: number;
+  }
+> => {
   try {
-    const history = getLiquidityHistory(walletAddress);
-    const positions: Record<string, { token1: string; token2: string; amount1: number; amount2: number }> = {};
+    const history =
+      getLiquidityHistory(walletAddress);
+
+    const positions: Record<
+      string,
+      {
+        token: string;
+        amount: number;
+      }
+    > = {};
 
     history.forEach((item) => {
-      const key = `${item.token1}_${item.token2}`;
+      if (
+        !item ||
+        typeof item.amount !==
+          "number"
+      )
+        return;
+
+      const key = item.token;
+
       if (!positions[key]) {
-        positions[key] = { token1: item.token1, token2: item.token2, amount1: 0, amount2: 0 };
+        positions[key] = {
+          token: key,
+          amount: 0,
+        };
       }
+
       if (item.type === "add") {
-        positions[key].amount1 += item.amount1;
-        positions[key].amount2 += item.amount2;
-      } else {
-        positions[key].amount1 -= item.amount1;
-        positions[key].amount2 -= item.amount2;
+        positions[key].amount +=
+          Number(item.amount);
+      }
+
+      if (item.type === "remove") {
+        positions[key].amount -=
+          Number(item.amount);
       }
     });
 
     return positions;
   } catch (error) {
-    console.error("Error getting user positions:", error);
+    console.error(error);
     return {};
   }
 };
+
+export const fetchUserLiquidity = async (walletAddress: string) => getUserPositionsFromHistory(walletAddress);
+export const fetchGlobalPoolStats = async () => ({ tvl: 1254350.75, apr: 24.8, activePositions: 5 });
