@@ -4,8 +4,8 @@ import SwapCard from "../../components/SwapCard";
 import SkeletonCard from "../../components/SkeletonCard";
 import PageTransition from "../../components/PageTransition";
 
-import { Wallet } from "lucide-react";
-import { motion } from "framer-motion";
+import { Wallet, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 declare global {
   interface Window {
@@ -13,9 +13,15 @@ declare global {
   }
 }
 
-const SwapPages: React.FC = () => {
+  const SwapPages: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   // 1. Simulasi efek loading kerangka halaman awal
   useEffect(() => {
@@ -78,7 +84,7 @@ const SwapPages: React.FC = () => {
         console.error("Gagal mengonfigurasi wallet:", error);
       }
     } else {
-      alert("Silakan pasang ekstensi MetaMask terlebih dahulu!");
+      showToast("Silakan pasang ekstensi MetaMask terlebih dahulu!", "error");
     }
   };
 
@@ -146,6 +152,40 @@ const SwapPages: React.FC = () => {
           </motion.div>
         </main>
       </div>
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -24, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -24, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl min-w-[280px] max-w-sm border ${
+              toast.type === "success"
+                ? "bg-gradient-to-r from-blue-600 to-cyan-500 border-blue-400 text-white"
+                : "bg-white border-red-100 text-red-700"
+            }`}
+          >
+            <div className={`rounded-full w-8 h-8 flex items-center justify-center shrink-0 ${
+              toast.type === "success" ? "bg-white/20" : "bg-red-50"
+            }`}>
+              {toast.type === "success"
+                ? <CheckCircle2 size={18} className="text-white" />
+                : <AlertCircle size={18} className="text-red-500" />
+              }
+            </div>
+            <p className="font-bold text-sm flex-1">{toast.message}</p>
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              className={`transition-colors ${
+                toast.type === "success" ? "text-white/60 hover:text-white" : "text-red-300 hover:text-red-600"
+              }`}
+            >
+              <X size={15} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </PageTransition>
   );
 };

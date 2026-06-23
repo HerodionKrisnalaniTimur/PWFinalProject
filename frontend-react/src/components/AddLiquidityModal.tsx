@@ -60,6 +60,7 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [txStatus, setTxStatus] = useState<TxStatusState | null>(null);
+  const [showToast, setShowToast] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -172,7 +173,8 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
           )}...${res.hash.slice(-8)}`,
         });
 
-        alert("Likuiditas Berhasil Ditambahkan ke Pool!");
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3500);
         setAmount("");
 
         await refreshBalances();
@@ -410,8 +412,35 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
                 </div>
               </motion.div>
             )}
+            
           </AnimatePresence>
         </motion.div>
+          <AnimatePresence>
+          {showToast && (
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-5 py-3.5 rounded-2xl shadow-xl min-w-[280px] max-w-sm"
+            >
+              <div className="bg-white/20 rounded-full w-8 h-8 flex items-center justify-center shrink-0">
+                <CheckCircle2 size={18} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-sm">Likuiditas Berhasil Ditambahkan!</p>
+                <p className="text-xs text-white/75 mt-0.5">Dana Anda telah masuk ke pool</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowToast(false)}
+                className="text-white/60 hover:text-white transition-colors"
+              >
+                <X size={15} />
+              </button>
+            </motion.div>
+          )}
+      </AnimatePresence>
       </div>
     </AnimatePresence>
   );

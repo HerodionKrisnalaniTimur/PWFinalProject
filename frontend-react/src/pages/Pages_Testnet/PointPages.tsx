@@ -9,11 +9,14 @@ import {
   TrendingUp,
   ShoppingCart,
   X,
-  Trash2
+  Trash2,
+  CheckCircle2,
+  AlertCircle,
 } from "lucide-react";
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 
 // IMPORT GAMBAR BARU DARI FOLDER ASSETS
 import hydePin from "../../assets/sanshee_coffee-talk_Hyde-collector_s-pin.webp";
@@ -43,11 +46,16 @@ const rewardItems = [
 const PointsPage = () => {
   const [loading, setLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
-  const [userPoints, setUserPoints] = useState(1250); 
+  const [userPoints, setUserPoints] = useState(10000); 
   const [selectedItem, setSelectedItem] = useState<any>(null); 
   const [quantity, setQuantity] = useState(1); 
   const [cart, setCart] = useState<any[]>([]);
   const [isCartModalOpen, setIsCartModalOpen] = useState(false); 
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const showToast = (message: string, type: "success" | "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   // Simulasi memuat data aktivitas poin
   useEffect(() => {
@@ -110,7 +118,7 @@ const PointsPage = () => {
         console.error("Gagal mengonfigurasi wallet:", error);
       }
     } else {
-      alert("Silakan install ekstensi MetaMask terlebih dahulu!");
+      showToast("Silahkan install ekstensi MetaMask terlebih dahulu!", "error");
     }
   };
 
@@ -138,7 +146,7 @@ const PointsPage = () => {
       setCart([...cart, { ...selectedItem, quantity }]);
     }
     
-    alert(`Berhasil! ${quantity}x ${selectedItem.itemName} dimasukkan ke keranjang.`);
+    showToast(`${quantity}x ${selectedItem.itemName} dimasukkan ke keranjang.`, "success");
     closeItemDetail();
   };
 
@@ -153,9 +161,9 @@ const PointsPage = () => {
       setUserPoints(userPoints - totalCost);
       setCart([]); 
       setIsCartModalOpen(false); 
-      alert(`Pembayaran sukses! Kamu menghabiskan ${totalCost.toLocaleString()} PTS. Sisa poin: ${userPoints - totalCost} PTS`);
+      showToast(`Pembayaran sukses! Kamu menghabiskan ${totalCost.toLocaleString()} PTS. Sisa poin: ${userPoints - totalCost} PTS`, "success");
     } else {
-      alert(`Gagal! Poinmu tidak cukup. Total belanjaan: ${totalCost.toLocaleString()} PTS.`);
+      showToast(`Poinmu tidak cukup. Total belanjaan: ${totalCost.toLocaleString()} PTS.`, "error");
     }
   };
 
@@ -431,6 +439,40 @@ const PointsPage = () => {
           )}
         </main>
       </div>
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -24, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -24, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className={`fixed top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl min-w-[280px] max-w-sm border ${
+              toast.type === "success"
+                ? "bg-gradient-to-r from-blue-600 to-cyan-500 border-blue-400 text-white"
+                : "bg-white border-red-100 text-red-700"
+            }`}
+          >
+            <div className={`rounded-full w-8 h-8 flex items-center justify-center shrink-0 ${
+              toast.type === "success" ? "bg-white/20" : "bg-red-50"
+            }`}>
+              {toast.type === "success"
+                ? <CheckCircle2 size={18} className="text-white" />
+                : <AlertCircle size={18} className="text-red-500" />
+              }
+            </div>
+            <p className="font-bold text-sm flex-1">{toast.message}</p>
+            <button
+              type="button"
+              onClick={() => setToast(null)}
+              className={`transition-colors ${
+                toast.type === "success" ? "text-white/60 hover:text-white" : "text-red-300 hover:text-red-600"
+              }`}
+            >
+              <X size={15} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </PageTransition>
   );
 };
