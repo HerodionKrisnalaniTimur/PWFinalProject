@@ -426,7 +426,7 @@ const PoolPage = () => {
               <div className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
                 <TrendingUp className="text-green-500 mb-4" />
                 <h3 className="text-gray-500 text-sm mb-2">
-                  Total APR
+                  Total APR 
                 </h3>
                 <p className="text-3xl font-bold">
                   {globalStats.apr.toFixed(
