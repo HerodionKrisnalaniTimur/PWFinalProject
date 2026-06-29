@@ -1,24 +1,20 @@
 const hre = require("hardhat");
 
 async function main() {
-  // Deploy USDT sebagai Anchor Base
   const MockUSDT = await hre.ethers.getContractFactory("MockUSDT");
   const usdt = await MockUSDT.deploy();
   await usdt.waitForDeployment();
   const usdtAddress = await usdt.getAddress();
   console.log("MockUSDT deployed to:", usdtAddress);
 
-  // Deploy SimpleSwap Router
   const SimpleSwap = await hre.ethers.getContractFactory("SimpleSwap");
   const swap = await SimpleSwap.deploy(usdtAddress);
   await swap.waitForDeployment();
   const swapAddress = await swap.getAddress();
   console.log("SimpleSwap Router deployed to:", swapAddress);
 
-  //  Cetakan Token Game
   const TokenFactory = await hre.ethers.getContractFactory("MultiToken");
 
-  // Daftar Koin Game dan Bobot Nilainya (Dikali 100)
   const tokenData = [
     { name: "Zentrix Token", symbol: "ZTX", rate: 70 },    // 0.7 USDT
     { name: "Agate Token", symbol: "AGT", rate: 200 },    // 2.0 USDT
@@ -45,9 +41,8 @@ async function main() {
     deployedTokens.push({ address: tokenAddress, symbol: t.symbol, rate: t.rate });
   }
 
-  // Supply initial liquidity ke pool (500,000 tokens per coin)
   console.log("\nSupplying initial liquidity to pool...");
-  const liquidityAmount = hre.ethers.parseEther("500000"); // 500,000 tokens
+  const liquidityAmount = hre.ethers.parseEther("500000"); 
 
   for (const token of deployedTokens) {
     const contract = await hre.ethers.getContractAt("MockUSDT", token.address);

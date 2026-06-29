@@ -74,12 +74,12 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
     }
     setLoadingRate(true);
     try {
-      // 1. Ambil rate masing-masing token secara on-chain terpisah sesuai aturan swapService
+      // Ambil rate masing-masing token secara on-chain terpisah sesuai aturan swapService
       const rateFrom = await fetchLiveTokenRate(from);
       const rateTo = await fetchLiveTokenRate(to);
       
       if (rateTo > 0) {
-        // 2. Terapkan rumus konversi multi-token: (Jumlah Input * Rate Asal) / Rate Tujuan
+        // Terapkan rumus konversi multi-token: (Jumlah Input * Rate Asal) / Rate Tujuan
         const estimatedAmount = (parseFloat(amount) * rateFrom) / rateTo;
         setToAmount(estimatedAmount.toFixed(4));
       } else {

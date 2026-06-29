@@ -23,7 +23,7 @@ declare global {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // 1. Simulasi efek loading kerangka halaman awal
+  // Simulasi efek loading kerangka halaman awal
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
@@ -31,7 +31,7 @@ declare global {
     return () => clearTimeout(timer);
   }, []);
 
-  // 2. Cek koneksi akun secara otomatis
+  // Cek koneksi akun secara otomatis
   useEffect(() => {
     const checkConnection = async () => {
       if (typeof window !== "undefined" && window.ethereum) {
@@ -50,7 +50,7 @@ declare global {
     checkConnection();
   }, []);
 
-  // 3. Listener Real-time untuk mendeteksi pergantian akun MetaMask
+  // Listener Real-time untuk mendeteksi pergantian akun MetaMask
   useEffect(() => {
     if (typeof window !== "undefined" && window.ethereum) {
       const handleAccountsChanged = (accounts: string[]) => {
@@ -68,7 +68,7 @@ declare global {
     }
   }, []);
 
-  // 4. Fungsi Interaktif Tombol Hubungkan / Ganti Wallet via MetaMask
+  // Fungsi Interaktif Tombol Hubungkan / Ganti Wallet via MetaMask
   const handleWalletAction = async () => {
     if (typeof window !== "undefined" && window.ethereum) {
       try {

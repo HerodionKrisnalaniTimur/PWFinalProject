@@ -86,30 +86,28 @@ const PoolPage = () => {
     setIsModalOpen(true);
   };
 
-  const loadLiquidityData = async (
-    address: string
-  ) => {
+  const loadLiquidityData = async (address: string) => {
     try {
-      const positionsData =
-        getUserPositionsFromHistory(address);
-
-      const positions: PoolPosition[] =
-        Object.values(positionsData).filter((pos: any) => pos.amount > 0
-        );
-
-      const stats = calculateTotalStats(address);
-
-      const historyData =
-        getLiquidityHistory(address);
-
-      setUserPositions(positions);
-      setGlobalStats(stats);
+      const historyData = getLiquidityHistory(address);
       setHistory(historyData);
+
+      const statsData = await calculateTotalStats(address);
+      const positionsData = await getUserPositionsFromHistory(address);
+
+      const positionsArray = Object.keys(positionsData).map((key) => ({
+        token: positionsData[key].token,
+        amount: positionsData[key].amount,
+      }));
+
+      setUserPositions(positionsArray);
+
+      setGlobalStats({
+        ...statsData,
+        activePositions: positionsArray.length // Sinkronkan juga jumlah angkanya
+      });
+
     } catch (error) {
-      console.error(
-        "Gagal memuat data pool:",
-        error
-      );
+      console.error("Error loading liquidity data:", error);
     } finally {
       setLoading(false);
     }
@@ -181,7 +179,6 @@ const PoolPage = () => {
 
   useEffect(() => {
     if (walletAddress) {
-      loadLiquidityData(walletAddress);
       setupAutoRefresh(walletAddress);
     }
 
