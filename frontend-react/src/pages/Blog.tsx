@@ -1,157 +1,187 @@
-import { useRef, useState, MouseEvent } from "react";
+import { useEffect, useRef, useState } from "react";
+import { motion, useMotionValue, animate } from "framer-motion";
 import { ArrowLeft, ArrowRight } from "lucide-react";
-import { animate } from "framer-motion";
 
 import img1 from "../assets/blog1.png";
 import img2 from "../assets/blog2.png";
 import img3 from "../assets/blog3.png";
 import img4 from "../assets/blog4.png";
 
-const initialBlogs = [
+type Item = {
+  title: string;
+  desc: string;
+  image: string;
+};
+
+const data: Item[] = [
   {
-    title: "Instant Payments",
-    desc: "Cross-border settlements confirmed in under one second.",
+    title: "Agate International",
+    desc: "salah satu studio game terbesar di Indonesia, Agate telah melahirkan puluhan judul sukses seperti Valthirian Arc yang populer di kancah internasional. Mereka adalah pionir dalam membangun ekosistem developer profesional di tanah air.",
     image: img1,
   },
   {
-    title: "Compliant Finance",
-    desc: "Digital ID, zk-KYC, and programmable AML.",
+    title: "Toge Productions",
+    desc: "Terkenal lewat fenomena global Coffee Talk, studio ini tidak hanya menciptakan game, tetapi juga menjadi inkubator bagi developer indie lokal lainnya. Mereka sukses membawa narasi budaya lokal ke telinga pemain di seluruh dunia.",
     image: img2,
   },
   {
-    title: "Infrastructure Assets",
-    desc: "Real-world assets accessible at internet scale.",
+    title: "Digital Happiness",
+    desc: "Studio di balik seri DreadOut, game horor Indonesia pertama yang sukses besar di platform global. Mereka berhasil membuktikan bahwa mitologi dan hantu lokal bisa menjadi komoditas kreatif yang sangat diminati di pasar internasional.",
     image: img3,
   },
   {
-    title: "Stablecoins",
-    desc: "Stable assets backed by verified reserves.",
+    title: "Mojiken Studio",
+    desc: "game peraih penghargaan A Space for the Unbound. Dikenal karena gaya visual pixel art yang memukau dan cerita yang menyentuh hati, Mojiken membawa identitas visual khas Indonesia Timur ke level yang lebih tinggi.",
     image: img4,
-  }
+  },
 ];
 
-export default function Blog() {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  
-  const [displayBlogs, setDisplayBlogs] = useState(initialBlogs);
-  const [activeIndex, setActiveIndex] = useState(0);
+export default function BlogAppleCarousel() {
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Mencegah konflik drag jika animasi tombol panah sedang berjalan
-  const isAnimatingRef = useRef(false);
+  const GAP = 24;
+  const [cardW, setCardW] = useState(320);
+  const [centerOffset, setCenterOffset] = useState(0);
 
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeftPos, setScrollLeftPos] = useState(0);
+  useEffect(() => {
+    const update = () => {
+      let currentCardW = 320;
+      if (window.innerWidth < 640) currentCardW = 260;
+      else if (window.innerWidth < 1024) currentCardW = 300;
+      setCardW(currentCardW);
 
-  // --- LOGIKA UTAMA: FREE SCROLL & DETEKSI TENGAH ---
-  const handleScroll = () => {
-    if (!scrollRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-
-    // Infinite Scroll (Gandakan array saat mendekati ujung)
-    if (scrollLeft + clientWidth >= scrollWidth - 800) {
-      setDisplayBlogs((prev) => [...prev, ...initialBlogs]);
-    }
-
-    // Deteksi Kartu Mana yang Ada di Tengah secara Real-time
-    const containerCenter = scrollLeft + clientWidth / 2;
-    const cards = scrollRef.current.querySelectorAll('.blog-card');
-    
-    let closestIndex = activeIndex;
-    let minDistance = Infinity;
-
-    cards.forEach((card, index) => {
-      const cardElement = card as HTMLElement;
-      // Ambil titik tengah dari masing-masing card
-      const cardCenter = cardElement.offsetLeft + cardElement.offsetWidth / 2;
-      const distance = Math.abs(containerCenter - cardCenter);
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestIndex = index;
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        setCenterOffset(containerWidth / 2 - currentCardW / 2);
       }
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const step = cardW + GAP;
+
+  // 7 copies = 28 cards — enough buffer for 12+ rapid clicks in either direction
+  const COPIES = 7;
+  const extended = Array.from({ length: COPIES }, () => data).flat();
+  const baseIndex = data.length * Math.floor(COPIES / 2); // Start at index 12
+
+  const x = useMotionValue(0);
+  const [index, setIndex] = useState(baseIndex);
+  const indexRef = useRef(baseIndex);
+  // When true, CSS transitions are disabled to prevent flicker during invisible reset
+  const [resetting, setResetting] = useState(false);
+
+  // Update both ref and state
+  const updateIndex = (newIndex: number) => {
+    indexRef.current = newIndex;
+    setIndex(newIndex);
+  };
+
+  // Set initial position (center)
+  useEffect(() => {
+    if (centerOffset === 0) return;
+    x.set(-(indexRef.current * step) + centerOffset);
+  }, [centerOffset, cardW]);
+
+  // IDLE RESET: silently reset to safe range when carousel is at rest.
+  // Uses 'resetting' state to disable CSS transitions during the jump,
+  // preventing the flickering that plagued the original code.
+  useEffect(() => {
+    if (centerOffset === 0 || step === 0) return;
+
+    const safeMin = data.length * Math.floor(COPIES / 2);
+    const safeMax = safeMin + data.length - 1;
+    let timeoutId: number;
+
+    const unsubscribe = x.on("change", () => {
+      clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        const currentIdx = indexRef.current;
+        if (currentIdx < safeMin || currentIdx > safeMax) {
+          const resetIdx = ((currentIdx - safeMin) % data.length + data.length) % data.length + safeMin;
+
+          // 1. Disable CSS transitions
+          setResetting(true);
+          // 2. Jump position and index (visually identical because same data)
+          x.set(-(resetIdx * step) + centerOffset);
+          updateIndex(resetIdx);
+          // 3. Re-enable transitions after 2 paint frames (ensures DOM has settled)
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              setResetting(false);
+            });
+          });
+        }
+      }, 250);
     });
 
-    // Update kartu yang aktif (menyala) tanpa memaksa scroll
-    if (closestIndex !== activeIndex) {
-      setActiveIndex(closestIndex);
-    }
-  };
+    return () => {
+      unsubscribe();
+      clearTimeout(timeoutId);
+    };
+  }, [centerOffset, step]);
 
-  // --- LOGIKA ANIMASI SNAP KHUSUS TOMBOL PANAH ---
-  const scrollToIndex = (index: number) => {
-    if (!scrollRef.current) return;
-    const cards = scrollRef.current.querySelectorAll('.blog-card');
-    if (!cards[index]) return;
+  // SNAP FUNCTION — updates index (triggers CSS transition on cards) and slides container
+  const snapTo = (i: number) => {
+    if (!containerRef.current || centerOffset === 0) return;
 
-    const container = scrollRef.current;
-    const card = cards[index] as HTMLElement;
+    updateIndex(i);
 
-    // Kalkulasi jarak agar card ini berada persis di tengah
-    const targetScroll = card.offsetLeft - (container.clientWidth / 2) + (card.offsetWidth / 2);
-
-    isAnimatingRef.current = true; 
-
-    animate(container.scrollLeft, targetScroll, {
-      type: "spring",
-      stiffness: 70, 
-      damping: 20,
-      mass: 1,
-      onUpdate: (latest) => {
-        if (scrollRef.current) scrollRef.current.scrollLeft = latest;
-      },
-      onComplete: () => {
-        isAnimatingRef.current = false; 
-      }
+    const targetX = -(i * step) + centerOffset;
+    animate(x, targetX, {
+      type: "tween",
+      duration: 0.35,
+      ease: [0.22, 1, 0.36, 1],
     });
   };
 
-  const scroll = (direction: "left" | "right") => {
-    const newIndex = direction === "left" ? Math.max(0, activeIndex - 1) : activeIndex + 1;
-    scrollToIndex(newIndex);
+  const next = () => snapTo(indexRef.current + 1);
+  const prev = () => snapTo(indexRef.current - 1);
+
+  // DRAG SNAP
+  const onDragEnd = () => {
+    if (!containerRef.current || centerOffset === 0) return;
+
+    const currentX = x.get();
+    const projectedIndex = (centerOffset - currentX) / step;
+    const targetIndex = Math.round(projectedIndex);
+
+    snapTo(targetIndex);
   };
 
-  // --- LOGIKA MOUSE DRAG NATIVE (FREE DRAG) ---
-  const handleMouseDown = (e: MouseEvent) => {
-    if (isAnimatingRef.current) return; 
-    setIsDragging(true);
-    if (!scrollRef.current) return;
-    setStartX(e.pageX - scrollRef.current.offsetLeft);
-    setScrollLeftPos(scrollRef.current.scrollLeft);
-  };
-
-  const handleMouseLeave = () => {
-    setIsDragging(false);
-    // Auto-snap dihapus dari sini
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-    // Auto-snap dihapus dari sini
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging || !scrollRef.current) return;
-    e.preventDefault();
-    const x = e.pageX - scrollRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    scrollRef.current.scrollLeft = scrollLeftPos - walk;
-  };
+  // Distance from current center card — drives card styles
+  const distance = (i: number) => Math.abs(i - index);
 
   return (
-    <section className="shadow-lg hover:shadow-blue-500/30 transition bg-blue-700 py-20 px-6 text-white relative overflow-hidden">
-      
-      <div className="max-w-6xl mx-auto flex justify-between items-center mb-10">
-        <h2 className="text-3xl font-bold">Real Finance. Real Participation</h2>
+    <section className="relative py-20 bg-gradient-to-b from-blue-700 via-blue-800 to-blue-900 overflow-hidden "id="blog">
+
+      {/* GRID */}
+      <div className="absolute inset-0 opacity-[0.05] pointer-events-none 
+        bg-[linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] 
+        bg-[size:40px_40px]" />
+
+      {/* GLOW */}
+      <div className="absolute top-[-120px] left-[-120px] w-[350px] h-[350px] bg-blue-400/30 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-120px] right-[-120px] w-[350px] h-[350px] bg-purple-500/30 blur-[120px] rounded-full" />
+
+      {/* HEADER */}
+      <div className="max-w-6xl mx-auto flex justify-between items-center mb-12 px-4">
+        <h2 className="text-2xl md:text-3xl font-bold text-white">
+          Real Community. Real Participation
+        </h2>
+
         <div className="flex gap-3">
-          <button 
-            onClick={() => scroll("left")} 
+          <button
+            onClick={prev}
             className="bg-white text-black p-3 rounded-lg hover:bg-gray-200 transition"
           >
             <ArrowLeft size={18} />
           </button>
-          <button 
-            onClick={() => scroll("right")} 
+
+          <button
+            onClick={next}
             className="bg-white text-black p-3 rounded-lg hover:bg-gray-200 transition"
           >
             <ArrowRight size={18} />
@@ -159,51 +189,79 @@ export default function Blog() {
         </div>
       </div>
 
-      <div 
-        ref={scrollRef} 
-        onScroll={handleScroll}
-        onMouseDown={handleMouseDown}
-        onMouseLeave={handleMouseLeave}
-        onMouseUp={handleMouseUp}
-        onMouseMove={handleMouseMove}
-        className={`overflow-x-auto overflow-y-hidden no-scrollbar ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        <div className="flex gap-6 w-max items-stretch pb-10 pt-4 px-[calc(50vw-200px)] md:px-[calc(50vw-250px)]">
-          
-          {displayBlogs.map((item, index) => (
-            <div
-              key={`blog-${index}`}
-              className={`blog-card w-[400px] md:w-[500px] shrink-0 flex flex-col bg-white text-black rounded-2xl overflow-hidden transition-all duration-500 select-none
-                ${activeIndex === index ? "opacity-100 shadow-2xl" : "opacity-40 shadow-md"}
-              `}
-            >
-              <div className="h-64 bg-black shrink-0 pointer-events-none">
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  draggable="false" 
-                  className="w-full h-full object-cover"
+      {/* CAROUSEL */}
+      <div ref={containerRef} className="overflow-hidden px-4">
+        <motion.div
+          style={{ x }}
+          drag="x"
+          onDragEnd={onDragEnd}
+          dragConstraints={{
+            left: -(extended.length * step),
+            right: extended.length * step,
+          }}
+          dragElastic={0.08}
+          dragMomentum={false}
+          dragTransition={{ bounceStiffness: 200, bounceDamping: 30 }}
+          className="flex gap-6 cursor-grab active:cursor-grabbing will-change-transform"
+        >
+          {extended.map((item, i) => {
+            const d = distance(i);
+
+            const scale = d === 0 ? 1 : d === 1 ? 0.94 : 0.88;
+            const opacity = d === 0 ? 1 : d === 1 ? 0.7 : 0.45;
+            const blur = d === 0 ? 0 : d === 1 ? 1.2 : 2.5;
+
+            return (
+              <div
+                key={i}
+                style={{
+                  transform: `scale(${scale})`,
+                  opacity,
+                  filter: `blur(${blur}px)`,
+                  zIndex: 100 - d,
+                  boxShadow:
+                    d === 0
+                      ? "0 25px 70px rgba(0,0,0,0.35)"
+                      : "0 10px 30px rgba(0,0,0,0.2)",
+                  // CSS transition for smooth style changes on click;
+                  // disabled during invisible reset to prevent flicker
+                  transition: resetting
+                    ? "none"
+                    : "transform 0.3s ease-out, opacity 0.3s ease-out, filter 0.3s ease-out, box-shadow 0.3s ease-out",
+                }}
+                className="w-[260px] sm:w-[300px] md:w-[320px] shrink-0 bg-white rounded-2xl overflow-hidden relative"
+              >
+                {/* Glow overlay on center card */}
+                <div
+                  style={{
+                    opacity: d === 0 ? 1 : 0,
+                    transition: resetting ? "none" : "opacity 0.3s ease-out",
+                  }}
+                  className="absolute inset-0 bg-blue-500/10 blur-xl rounded-2xl pointer-events-none"
                 />
-              </div>
 
-              <div className="p-10 flex flex-col flex-grow">
-                <h3 className="text-xl font-bold mb-3">{item.title}</h3>
-                <p className="text-base text-zinc-600 leading-relaxed flex-grow">
-                  {item.desc}
-                </p>
-              </div>
-            </div>
-          ))}
+                <div className="h-48 bg-black">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    draggable="false"
+                    className="w-full h-full object-cover select-none"
+                  />
+                </div>
 
-        </div>
+                <div className="p-6">
+                  <h3 className="text-lg font-bold mb-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-sm text-zinc-600">
+                    {item.desc}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </motion.div>
       </div>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .no-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}} />
     </section>
   );
 }

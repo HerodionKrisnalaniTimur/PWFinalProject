@@ -22,7 +22,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+
+    "ignoreDeprecations": "6.0"
   },
+
   "include": ["src", "src/components/LogoLoop.jsx"]
 }
