@@ -126,7 +126,7 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
         message: `Berhasil Swap! Transaksi Anda telah dikonfirmasi` 
       });
 
-      addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, 50);
+      addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, 50, walletAddress, "Sepolia Testnet");
       setFromAmount("");
       setToAmount("");
       loadBalances();

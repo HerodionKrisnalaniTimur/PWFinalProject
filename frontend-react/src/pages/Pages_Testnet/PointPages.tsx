@@ -51,7 +51,7 @@ const rewardItems = [
 const PointsPage = () => {
   const [loading, setLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
-  const { userPoints, recentActivity } = usePoints();
+  const { userPoints, recentActivity, fetchUserActivities } = usePoints();
   let currentTier = "Silver";
   let nextTier = "Gold";
   let pointsNeeded = 1000 - userPoints;
@@ -83,10 +83,13 @@ const PointsPage = () => {
 
   // Simulasi memuat data aktivitas poin
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const loadData = async () => {
+      if (walletAddress) {
+        await fetchUserActivities(walletAddress);
+      }
       setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    };
+    loadData();
   }, [walletAddress]);
 
   // Cek koneksi akun otomatis saat pertama kali dApp dibuka
