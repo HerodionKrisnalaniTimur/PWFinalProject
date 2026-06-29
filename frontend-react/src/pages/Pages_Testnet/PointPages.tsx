@@ -35,7 +35,7 @@ declare global {
   }
 }
 
-// 1. TAMBAHKAN DAT INI DI SINI
+// 1. DATA REWARD BARU DI SINI (ID, STUDIO, NAMA ITEM, HARGA, GAMBAR, TAG PROMO)
 const rewardItems = [
   { id: 1, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Baileys Collector's Pin", price: 1500, img: baileysPin, tag: "New" },
   { id: 2, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Lua Collector's Pin", price: 2500, img: luaPin, tag: "New" },
