@@ -16,8 +16,6 @@ import {
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { usePoints } from '../../context/PointsContext';
-
 
 // IMPORT GAMBAR BARU DARI FOLDER ASSETS
 import hydePin from "../../assets/sanshee_coffee-talk_Hyde-collector_s-pin.webp";
@@ -27,8 +25,6 @@ import aquaPin from "../../assets/coffee-talk_pin_aqua-collectors_web.webp";
 import neilPin from "../../assets/sanshee_coffee-talk_Neil-collector_s-pin.webp";
 import standee from "../../assets/product-image_Coffee-Talk_Hyde-Neil-Standee_WBG.webp";
 import mojikenCard from "../../assets/Game Gift Card MojiKeN.png";
-import lindaBag from "../../assets/Linda_DO_bag.webp";
-import pomni from "../../assets/Pomni-Default.webp";
 declare global {
   interface Window { 
     ethereum?: any;
@@ -37,42 +33,19 @@ declare global {
 
 // 1. TAMBAHKAN DAT INI DI SINI
 const rewardItems = [
-  { id: 1, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Baileys Collector's Pin", price: 1500, img: baileysPin, tag: "New" },
-  { id: 2, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Lua Collector's Pin", price: 2500, img: luaPin, tag: "New" },
-  { id: 3, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Aqua Collector's Pin", price: 2500, img: aquaPin, tag: "New" },
-  { id: 4, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Neil Collector's Pin", price: 2500, img: neilPin, tag: "New" },
-  { id: 5, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Hyde Collector's Pin", price: 2500, img: hydePin, tag: "New" },
-  { id: 6, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Hyde & Neil Standee", price: 5000, oldPrice: 6500, img: standee, tag: "Save 1.500 PTS" },
+  { id: 1, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk - Baileys Collector's Pin", price: 100, img: baileysPin, tag: "New" },
+  { id: 2, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk - Lua Collector's Pin", price: 2500, img: luaPin, tag: "New" },
+  { id: 3, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk - Aqua Collector's Pin", price: 2500, img: aquaPin, tag: "New" },
+  { id: 4, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk - Neil Collector's Pin", price: 2500, img: neilPin, tag: "New" },
+  { id: 5, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk - Hyde Collector's Pin", price: 2500, img: hydePin, tag: "New" },
+  { id: 6, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk - Hyde & Neil Standee", price: 5000, oldPrice: 6500, img: standee, tag: "Save 1.500 PTS" },
   { id: 7, studio: "MOJIKEN STUDIO", itemName: "Mojiken Studio Exclusive E-Voucher", price: 1500, img: mojikenCard, tag: "Digital" },
-  { id: 8, studio: "Digital Happiness", itemName: "DreadOut Official Linda Bag", price: 12000, img: lindaBag, tag: "Merch" },
-  { id: 9, studio: "Gooseworx", itemName: "Glitch Productions Pomni UwU", price: 200000, img: pomni, tag: "Merch" },
 ];
 
 const PointsPage = () => {
   const [loading, setLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
-  const { userPoints, recentActivity } = usePoints();
-  let currentTier = "Silver";
-  let nextTier = "Gold";
-  let pointsNeeded = 1000 - userPoints;
-  let tierBadge = "Explorer";
-
-  if (userPoints >= 10000) {
-    currentTier = "Diamond";
-    nextTier = "Max";
-    pointsNeeded = 0;
-    tierBadge = "The Whale";
-  } else if (userPoints >= 5000) {
-    currentTier = "Platinum";
-    nextTier = "Diamond";
-    pointsNeeded = 10000 - userPoints;
-    tierBadge = "Elite Trader";
-  } else if (userPoints >= 1000) {
-    currentTier = "Gold";
-    nextTier = "Platinum";
-    pointsNeeded = 5000 - userPoints;
-    tierBadge = "Pro Trader";
-  }
+  const [userPoints, setUserPoints] = useState(1250); 
   const [selectedItem, setSelectedItem] = useState<any>(null); 
   const [quantity, setQuantity] = useState(1); 
   const [cart, setCart] = useState<any[]>([]);
@@ -169,7 +142,7 @@ const handleAddToCart = () => {
     } else {
       setCart([...cart, { ...selectedItem, quantity }]);
     }
-    setToastMessage(`Success! ${quantity}x ${selectedItem.itemName} added.`);
+    setToastMessage(`Successfully added ${quantity}x ${selectedItem.itemName} to your cart.`);
     setIsCartBouncing(true);
     setTimeout(() => {
       setToastMessage(null);
@@ -194,7 +167,7 @@ const handleAddToCart = () => {
         isOpen: true,
         isSuccess: true,
         title: "Redemption Successful!",
-        message: `You spent ${totalCost.toLocaleString()} PTS. Your remaining balance is: ${userPoints - totalCost} PTS.`
+        message: `You spent ${totalCost.toLocaleString()} PTS. Sisa poin kamu sekarang: ${userPoints - totalCost} PTS.`
       });
     } else {
       setIsCartModalOpen(false); 
@@ -202,11 +175,10 @@ const handleAddToCart = () => {
         isOpen: true,
         isSuccess: false,
         title: "Insufficient Points!",
-        message: `Your total cost is ${totalCost.toLocaleString()} PTS, but you only have ${userPoints.toLocaleString()} PTS.`
+        message: `Your total cost is ${totalCost.toLocaleString()} PTS, sedangkan poinmu hanya ${userPoints.toLocaleString()} PTS.`
       });
     }
   };
-
   return (
     <PageTransition>
       <div className="min-h-screen bg-[#F8F9FA] flex text-[#1A1A1A] font-sans relative overflow-hidden">
@@ -254,35 +226,23 @@ const handleAddToCart = () => {
                 <p className="text-gray-400 text-sm font-medium">Accumulated rewards balance</p>
                 <h1 className="text-5xl font-black text-gray-900 mt-2 tracking-tight">{walletAddress ? userPoints.toLocaleString() : "0"} <span className="text-xl font-bold text-gray-400">PTS</span></h1>
               </div>
-            <div className="mt-8 pt-4 border-t border-gray-100 text-xs text-gray-400 flex items-center gap-1.5"><Sparkles size={14} className="text-yellow-500" /> Points are updated every block confirmation.</div>
+              <div className="mt-8 pt-4 border-t border-gray-100 text-xs text-gray-400 flex items-center gap-1.5"><Sparkles size={14} className="text-yellow-500" /> Points are updated every block confirmation.</div>
             </motion.div>
-            
-          {/* Card Kanan: Loyalty Tier */}
-          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="bg-white/70 backdrop-blur-2xl rounded-[32px] p-6 sm:p-8 border border-white shadow-xl flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-800">
-                  <Trophy className="text-amber-500" />Loyalty Tier
-                </h2>
-                <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1 rounded-full border border-purple-100">
-                  {tierBadge}
-                </span>
+
+            {/* Card Kanan: Global Rank */}
+            <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="bg-white/70 backdrop-blur-2xl rounded-[32px] p-6 sm:p-8 border border-white shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-800"><Trophy className="text-amber-500" />Global Rank</h2>
+                  <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1 rounded-full border border-purple-100">Top 5%</span>
+                </div>
+                <p className="text-gray-400 text-sm font-medium">Your current standing position</p>
+                <h1 className="text-5xl font-black text-gray-900 mt-2 tracking-tight">#{walletAddress ? "412" : "--"} <span className="text-xl font-bold text-gray-400">of all traders</span></h1>
               </div>
-              <p className="text-gray-400 text-sm font-medium">Your current loyalty status</p>
-              <h1 className="text-5xl font-black text-gray-900 mt-2 tracking-tight">
-                {walletAddress ? currentTier : "---"} <span className="text-xl font-bold text-gray-400">Trader</span>
-              </h1>
-            </div>
-            <div className="mt-8 pt-4 border-t border-gray-100 text-xs text-green-600 font-semibold flex items-center gap-1.5">
-              <TrendingUp size={16} /> 
-              {currentTier === "Diamond" 
-                ? "You have reached the max level!" 
-                : `You need ${pointsNeeded.toLocaleString()} PTS to unlock ${nextTier}.`
-              }
-            </div>
-          </motion.div>
-          
-        </div> {/* Penutup Grid Kartu Atas */}
+              <div className="mt-8 pt-4 border-t border-gray-100 text-xs text-green-600 font-semibold flex items-center gap-1.5"><TrendingUp size={16} /> +240 rank positions gained this week.</div>
+            </motion.div>
+          </div>
+
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto mt-6 mb-6 bg-white/70 backdrop-blur-2xl rounded-[32px] p-5 sm:p-8 border border-white shadow-xl">
             
             {selectedItem ? (
@@ -389,31 +349,30 @@ const handleAddToCart = () => {
             )}  
 
           </motion.div>
+
           {/* Card Bawah: Recent Activity */}
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto mt-6 bg-white/70 backdrop-blur-2xl rounded-[32px] p-5 sm:p-8 border border-white shadow-xl">
             <h3 className="text-xl font-bold text-gray-800 mb-6">Recent Point Activity</h3>
             {loading ? (
-              <div className="space-y-4 animate-pulse">
+              <div className="space-y-4 animate-pulse">›
                 <div className="h-16 bg-gray-200 rounded-2xl"></div>
               </div>
             ) : walletAddress ? (
               <div className="space-y-3">
-                {recentActivity && recentActivity.length > 0 ? (
-                  recentActivity.map((activity: any) => (
-                    <div key={activity.id} className="bg-[#F8F9FA]/80 p-4 rounded-2xl border border-white flex justify-between items-center shadow-sm">
-                      <div>
-                        <h5 className="text-sm font-bold text-gray-800">{activity.type}</h5>
-                        <p className="text-xs text-gray-400 mt-0.5">{activity.description}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">{new Date(activity.date).toLocaleString()} • Jaringan Sepolia</p>
-                      </div>
-                      <span className="text-sm font-extrabold text-green-600">+{activity.pointsAdded} PTS</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-sm text-gray-500 italic bg-[#F8F9FA]/50 rounded-2xl border border-dashed border-gray-200">
-                    Belum ada aktivitas. Lakukan Swap untuk mulai mengumpulkan poin!
+                <div className="bg-[#F8F9FA]/80 p-4 rounded-2xl border border-white flex justify-between items-center shadow-sm">
+                  <div>
+                    <h5 className="text-sm font-bold text-gray-800">Liquidity Provision Reward</h5>
+                    <p className="text-xs text-gray-400 mt-0.5">10 minutes ago • Jaringan Sepolia</p>
                   </div>
-                )}
+                  <span className="text-sm font-extrabold text-green-600">+150 PTS</span>
+                </div>
+                <div className="bg-[#F8F9FA]/80 p-4 rounded-2xl border border-white flex justify-between items-center shadow-sm">
+                  <div>
+                    <h5 className="text-sm font-bold text-gray-800">Token Swap Interaction</h5>
+                    <p className="text-xs text-gray-400 mt-0.5">2 hours ago • Jaringan Sepolia</p>
+                  </div>
+                  <span className="text-sm font-extrabold text-green-600">+50 PTS</span>
+                </div>
               </div>
             ) : (
               <div className="h-44 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center justify-center text-gray-400 font-medium bg-[#F8F9FA]/60">

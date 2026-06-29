@@ -389,6 +389,7 @@ const handleAddToCart = () => {
             )}  
 
           </motion.div>
+
           {/* Card Bawah: Recent Activity */}
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto mt-6 bg-white/70 backdrop-blur-2xl rounded-[32px] p-5 sm:p-8 border border-white shadow-xl">
             <h3 className="text-xl font-bold text-gray-800 mb-6">Recent Point Activity</h3>

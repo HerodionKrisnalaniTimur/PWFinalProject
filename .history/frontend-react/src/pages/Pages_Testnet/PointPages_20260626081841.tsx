@@ -16,8 +16,6 @@ import {
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { usePoints } from '../../context/PointsContext';
-
 
 // IMPORT GAMBAR BARU DARI FOLDER ASSETS
 import hydePin from "../../assets/sanshee_coffee-talk_Hyde-collector_s-pin.webp";
@@ -51,28 +49,34 @@ const rewardItems = [
 const PointsPage = () => {
   const [loading, setLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
-  const { userPoints, recentActivity } = usePoints();
-  let currentTier = "Silver";
-  let nextTier = "Gold";
-  let pointsNeeded = 1000 - userPoints;
-  let tierBadge = "Explorer";
+  const [userPoints, setUserPoints] = useState(10000);
+  // --- LOGIKA TIER SYSTEM ---
+  let currentTier = "Silver Tier";
+  let nextTier = "Gold Tier";
+  let pointsNeeded = 0;
+  let tierBadge = "Novice";
 
   if (userPoints >= 10000) {
-    currentTier = "Diamond";
+    currentTier = "Diamond Tier";
     nextTier = "Max";
     pointsNeeded = 0;
     tierBadge = "The Whale";
   } else if (userPoints >= 5000) {
-    currentTier = "Platinum";
-    nextTier = "Diamond";
+    currentTier = "Platinum Tier";
+    nextTier = "Diamond Tier";
     pointsNeeded = 10000 - userPoints;
     tierBadge = "Elite Trader";
   } else if (userPoints >= 1000) {
-    currentTier = "Gold";
-    nextTier = "Platinum";
+    currentTier = "Gold Tier";
+    nextTier = "Platinum Tier";
     pointsNeeded = 5000 - userPoints;
     tierBadge = "Pro Trader";
-  }
+  } else {
+    currentTier = "Silver Tier";
+    nextTier = "Gold Tier";
+    pointsNeeded = 1000 - userPoints;
+    tierBadge = "Explorer";
+  } 
   const [selectedItem, setSelectedItem] = useState<any>(null); 
   const [quantity, setQuantity] = useState(1); 
   const [cart, setCart] = useState<any[]>([]);
@@ -257,7 +261,7 @@ const handleAddToCart = () => {
             <div className="mt-8 pt-4 border-t border-gray-100 text-xs text-gray-400 flex items-center gap-1.5"><Sparkles size={14} className="text-yellow-500" /> Points are updated every block confirmation.</div>
             </motion.div>
             
-          {/* Card Kanan: Loyalty Tier */}
+          {/* Card Kanan: Global Rank */}
           <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="bg-white/70 backdrop-blur-2xl rounded-[32px] p-6 sm:p-8 border border-white shadow-xl flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-6">
@@ -275,13 +279,12 @@ const handleAddToCart = () => {
             </div>
             <div className="mt-8 pt-4 border-t border-gray-100 text-xs text-green-600 font-semibold flex items-center gap-1.5">
               <TrendingUp size={16} /> 
-              {currentTier === "Diamond" 
-                ? "You have reached the max level!" 
+              {currentTier === "Genesis Tier" 
+                ? "You have reached the max tier! 👑" 
                 : `You need ${pointsNeeded.toLocaleString()} PTS to unlock ${nextTier}.`
               }
             </div>
           </motion.div>
-          
         </div> {/* Penutup Grid Kartu Atas */}
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto mt-6 mb-6 bg-white/70 backdrop-blur-2xl rounded-[32px] p-5 sm:p-8 border border-white shadow-xl">
             
@@ -389,31 +392,30 @@ const handleAddToCart = () => {
             )}  
 
           </motion.div>
+
           {/* Card Bawah: Recent Activity */}
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto mt-6 bg-white/70 backdrop-blur-2xl rounded-[32px] p-5 sm:p-8 border border-white shadow-xl">
             <h3 className="text-xl font-bold text-gray-800 mb-6">Recent Point Activity</h3>
             {loading ? (
-              <div className="space-y-4 animate-pulse">
+              <div className="space-y-4 animate-pulse">›
                 <div className="h-16 bg-gray-200 rounded-2xl"></div>
               </div>
             ) : walletAddress ? (
               <div className="space-y-3">
-                {recentActivity && recentActivity.length > 0 ? (
-                  recentActivity.map((activity: any) => (
-                    <div key={activity.id} className="bg-[#F8F9FA]/80 p-4 rounded-2xl border border-white flex justify-between items-center shadow-sm">
-                      <div>
-                        <h5 className="text-sm font-bold text-gray-800">{activity.type}</h5>
-                        <p className="text-xs text-gray-400 mt-0.5">{activity.description}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">{new Date(activity.date).toLocaleString()} • Jaringan Sepolia</p>
-                      </div>
-                      <span className="text-sm font-extrabold text-green-600">+{activity.pointsAdded} PTS</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-sm text-gray-500 italic bg-[#F8F9FA]/50 rounded-2xl border border-dashed border-gray-200">
-                    Belum ada aktivitas. Lakukan Swap untuk mulai mengumpulkan poin!
+                <div className="bg-[#F8F9FA]/80 p-4 rounded-2xl border border-white flex justify-between items-center shadow-sm">
+                  <div>
+                    <h5 className="text-sm font-bold text-gray-800">Liquidity Provision Reward</h5>
+                    <p className="text-xs text-gray-400 mt-0.5">10 minutes ago • Jaringan Sepolia</p>
                   </div>
-                )}
+                  <span className="text-sm font-extrabold text-green-600">+150 PTS</span>
+                </div>
+                <div className="bg-[#F8F9FA]/80 p-4 rounded-2xl border border-white flex justify-between items-center shadow-sm">
+                  <div>
+                    <h5 className="text-sm font-bold text-gray-800">Token Swap Interaction</h5>
+                    <p className="text-xs text-gray-400 mt-0.5">2 hours ago • Jaringan Sepolia</p>
+                  </div>
+                  <span className="text-sm font-extrabold text-green-600">+50 PTS</span>
+                </div>
               </div>
             ) : (
               <div className="h-44 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center justify-center text-gray-400 font-medium bg-[#F8F9FA]/60">

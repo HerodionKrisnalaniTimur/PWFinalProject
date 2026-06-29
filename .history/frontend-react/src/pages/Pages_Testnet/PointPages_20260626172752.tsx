@@ -16,8 +16,6 @@ import {
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { usePoints } from '../../context/PointsContext';
-
 
 // IMPORT GAMBAR BARU DARI FOLDER ASSETS
 import hydePin from "../../assets/sanshee_coffee-talk_Hyde-collector_s-pin.webp";
@@ -51,7 +49,7 @@ const rewardItems = [
 const PointsPage = () => {
   const [loading, setLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
-  const { userPoints, recentActivity } = usePoints();
+  const [userPoints, setUserPoints] = useState(50000);
   let currentTier = "Silver";
   let nextTier = "Gold";
   let pointsNeeded = 1000 - userPoints;
@@ -389,31 +387,30 @@ const handleAddToCart = () => {
             )}  
 
           </motion.div>
+
           {/* Card Bawah: Recent Activity */}
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto mt-6 bg-white/70 backdrop-blur-2xl rounded-[32px] p-5 sm:p-8 border border-white shadow-xl">
             <h3 className="text-xl font-bold text-gray-800 mb-6">Recent Point Activity</h3>
             {loading ? (
-              <div className="space-y-4 animate-pulse">
+              <div className="space-y-4 animate-pulse">›
                 <div className="h-16 bg-gray-200 rounded-2xl"></div>
               </div>
             ) : walletAddress ? (
               <div className="space-y-3">
-                {recentActivity && recentActivity.length > 0 ? (
-                  recentActivity.map((activity: any) => (
-                    <div key={activity.id} className="bg-[#F8F9FA]/80 p-4 rounded-2xl border border-white flex justify-between items-center shadow-sm">
-                      <div>
-                        <h5 className="text-sm font-bold text-gray-800">{activity.type}</h5>
-                        <p className="text-xs text-gray-400 mt-0.5">{activity.description}</p>
-                        <p className="text-[10px] text-gray-400 mt-1">{new Date(activity.date).toLocaleString()} • Jaringan Sepolia</p>
-                      </div>
-                      <span className="text-sm font-extrabold text-green-600">+{activity.pointsAdded} PTS</span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-sm text-gray-500 italic bg-[#F8F9FA]/50 rounded-2xl border border-dashed border-gray-200">
-                    Belum ada aktivitas. Lakukan Swap untuk mulai mengumpulkan poin!
+                <div className="bg-[#F8F9FA]/80 p-4 rounded-2xl border border-white flex justify-between items-center shadow-sm">
+                  <div>
+                    <h5 className="text-sm font-bold text-gray-800">Liquidity Provision Reward</h5>
+                    <p className="text-xs text-gray-400 mt-0.5">10 minutes ago • Jaringan Sepolia</p>
                   </div>
-                )}
+                  <span className="text-sm font-extrabold text-green-600">+150 PTS</span>
+                </div>
+                <div className="bg-[#F8F9FA]/80 p-4 rounded-2xl border border-white flex justify-between items-center shadow-sm">
+                  <div>
+                    <h5 className="text-sm font-bold text-gray-800">Token Swap Interaction</h5>
+                    <p className="text-xs text-gray-400 mt-0.5">2 hours ago • Jaringan Sepolia</p>
+                  </div>
+                  <span className="text-sm font-extrabold text-green-600">+50 PTS</span>
+                </div>
               </div>
             ) : (
               <div className="h-44 border-2 border-dashed border-gray-200 rounded-3xl flex flex-col items-center justify-center text-gray-400 font-medium bg-[#F8F9FA]/60">
