@@ -15,7 +15,6 @@ import {
   getAllPools,
   addLiquidityHistory,
 } from "../services/poolService";
-import { usePoints } from "../context/PointsContext";
 
 interface AddLiquidityModalProps {
   isOpen: boolean;
@@ -62,7 +61,7 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [txStatus, setTxStatus] = useState<TxStatusState | null>(null);
   const [showToast, setShowToast] = useState(false);
-  const { addActivity } = usePoints();
+
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const currentPool =
@@ -165,7 +164,6 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
           amountNumber,
           res.hash
         );
-        addActivity("Liquidity Pool", `Provided ${amount} ${selectedToken} liquidity`, 150);
 
         setTxStatus({
           type: "success",
