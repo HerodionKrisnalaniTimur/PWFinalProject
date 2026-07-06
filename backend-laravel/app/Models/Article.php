@@ -9,11 +9,11 @@ class Article extends Model
 {
     use HasFactory;
 
-    // Menentukan kolom mana saja yang boleh diisi
     protected $fillable = [
         'title',
-        'slug',
         'content',
+        'category',
         'image',
+        'status',
     ];
 }

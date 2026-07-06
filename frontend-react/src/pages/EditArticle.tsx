@@ -1,11 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar'; 
-import Footer from './Footer'; 
+import Footer from './Footer';
+
+// ============================================
+// ⬇️ TAMBAHKAN IMPORT INI
+// ============================================
+import { useMetaMask } from '../context/MetaMaskContext';
 
 const EditArticle = () => {
-  const { id } = useParams(); // Mengambil ID dari URL
+  const { id } = useParams();
   const navigate = useNavigate();
+
+  // ============================================
+  // ⬇️ TAMBAHKAN: Ambil account dari MetaMask
+  // ============================================
+  const { account } = useMetaMask();
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -16,7 +26,6 @@ const EditArticle = () => {
     return text.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]+/g, '').replace(/\-\-+/g, '-').replace(/^-+/, '').replace(/-+$/, '');
   };
 
-  // Mengambil data artikel lama saat halaman pertama kali dibuka
   useEffect(() => {
     fetch(`http://127.0.0.1:8000/api/articles/${id}`)
       .then(res => res.json())
@@ -44,21 +53,33 @@ const EditArticle = () => {
     };
 
     try {
-      // Perhatikan: Methodnya PUT untuk melakukan update data
-      const response = await fetch(`http://127.0.0.1:8000/api/articles/${id}`, {
+      // ============================================
+      // ⬇️ UBAH: URL ke endpoint admin + kirim wallet header
+      // ============================================
+      const response = await fetch(`http://127.0.0.1:8000/api/admin/articles/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          'X-Wallet-Address': account || '', // ⬅️ TAMBAHKAN INI
         },
         body: JSON.stringify(updatedArticle)
       });
 
+      const data = await response.json();
+
       if (response.ok) {
         alert('Artikel berhasil diperbarui!');
-        navigate(`/news/${id}`); // Kembali ke halaman detail artikel
+        navigate(`/news/${id}`);
       } else {
-        alert('Gagal memperbarui artikel.');
+        // ============================================
+        // ⬇️ TAMBAHKAN: Handle error 403 (bukan admin)
+        // ============================================
+        if (response.status === 403) {
+          alert('⛔ Anda tidak memiliki akses admin!');
+        } else {
+          alert('Gagal memperbarui artikel: ' + (data.message || ''));
+        }
       }
     } catch (error) {
       console.error(error);
@@ -75,6 +96,12 @@ const EditArticle = () => {
         <div className="bg-white rounded-3xl shadow-sm border border-zinc-200 p-8 sm:p-12">
           <div className="mb-8 border-b border-zinc-100 pb-6">
             <h1 className="text-3xl font-extrabold text-zinc-900">Edit Artikel</h1>
+            {/* ============================================
+                ⬇️ TAMBAHKAN: Menampilkan wallet address
+                ============================================ */}
+            <div className="mt-2 text-xs text-zinc-400 bg-zinc-50 px-3 py-1 rounded inline-block">
+              Wallet: {account ? `${account.slice(0, 6)}...${account.slice(-4)}` : 'Belum terhubung'}
+            </div>
           </div>
 
           {isFetching ? (
@@ -84,7 +111,9 @@ const EditArticle = () => {
               <div>
                 <label className="block text-sm font-semibold text-zinc-700 mb-2">Judul Artikel</label>
                 <input
-                  type="text" required value={title}
+                  type="text" 
+                  required 
+                  value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-zinc-50"
                 />
@@ -92,13 +121,16 @@ const EditArticle = () => {
               <div>
                 <label className="block text-sm font-semibold text-zinc-700 mb-2">Isi Konten</label>
                 <textarea
-                  required rows={8} value={content}
+                  required 
+                  rows={8} 
+                  value={content}
                   onChange={(e) => setContent(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-zinc-300 focus:ring-2 focus:ring-blue-500 outline-none transition-all bg-zinc-50 resize-y"
                 ></textarea>
               </div>
               <button
-                type="submit" disabled={isLoading}
+                type="submit" 
+                disabled={isLoading}
                 className={`w-full py-4 rounded-xl font-bold text-white transition-all ${isLoading ? 'bg-zinc-400' : 'bg-green-600 hover:bg-green-700'}`}
               >
                 {isLoading ? 'Menyimpan Perubahan...' : 'Simpan Perubahan'}

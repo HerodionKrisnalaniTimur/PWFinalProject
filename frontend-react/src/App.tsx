@@ -15,6 +15,12 @@ import ArticleDetail from './pages/ArticleDetail';
 import CreateArticle from './pages/CreateArticle';
 import EditArticle from './pages/EditArticle';
 
+// ============================================
+// ⬇️ TAMBAHKAN IMPORT INI
+// ============================================
+import { MetaMaskProvider } from './context/MetaMaskContext';
+import ProtectedRoute from './components/ProtectedRoute';
+
 // Kita buat komponen LandingPage agar App.tsx tidak terlalu penuh
 const LandingPage = () => (
   <main>
@@ -47,24 +53,45 @@ const LandingPage = () => (
 
 function App() {
   return (
-    <Router><AnimatePresence mode="wait">
-      <Routes>
+    // ============================================
+    // ⬇️ UBAH: BUNGKUS DENGAN MetaMaskProvider
+    // ============================================
+    <MetaMaskProvider>
+      <Router>
+        <AnimatePresence mode="wait">
+          <Routes>
+            {/* Public Routes - Semua orang bisa akses */}
+            <Route path="/" element={<LandingPage />} /> 
+            <Route path="/swap" element={<SwapPage />} />
+            <Route path="/pool" element={<PoolPage />} />
+            <Route path="/points" element={<PointsPage />} />
+            <Route path="/convers" element={<ConversPage />} />
+            <Route path="/news" element={<NewsPage />} />
+            <Route path="/news/:id" element={<ArticleDetail />} />
             
-        {/* Path "/" akan menampilkan seluruh komponen Landing Page */}
-        <Route path="/" element={<LandingPage />} /> 
-        
-        {/* Path "/swap" akan menampilkan halaman FaroSwap */}
-        <Route path="/swap" element={<SwapPage />} />
-        <Route path="/pool" element={<PoolPage />} />
-        <Route path="/points" element={<PointsPage />} />
-        <Route path="/convers" element={<ConversPage />} />
-        <Route path="/news" element={<NewsPage />} />
-        <Route path="/news/:id" element={<ArticleDetail />} />
-        <Route path="/admin/create" element={<CreateArticle />} />
-        <Route path="/admin/edit/:id" element={<EditArticle />} />
-        
-      </Routes></AnimatePresence>
-    </Router>
+            {/* ============================================
+                ⬇️ UBAH: ADMIN ROUTES DENGAN ProtectedRoute
+                ============================================ */}
+            <Route 
+              path="/admin/create" 
+              element={
+                <ProtectedRoute>
+                  <CreateArticle />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/edit/:id" 
+              element={
+                <ProtectedRoute>
+                  <EditArticle />
+                </ProtectedRoute>
+              } 
+            />
+          </Routes>
+        </AnimatePresence>
+      </Router>
+    </MetaMaskProvider>
   );
 }
 
