@@ -12,35 +12,18 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     connectWallet, 
     account,
     switchWallet,
-    isSwitching
+    isSwitching // ✅ Ambil dari context
   } = useMetaMask();
   
   const [isVerifying, setIsVerifying] = useState(true);
 
   useEffect(() => {
-    // Jika sudah connect, langsung cek admin status
-    if (isConnected && account) {
-      // Context sudah handle checkAdminStatus otomatis
-      setIsVerifying(false);
-      return;
-    }
-
-    // Verifikasi awal
     const timer = setTimeout(() => {
       setIsVerifying(false);
-    }, 1000);
+    }, 500);
 
     return () => clearTimeout(timer);
-  }, [isConnected, account]);
-
-  // ============================================
-  // LOG untuk debugging
-  // ============================================
-  console.log('🔍 ProtectedRoute Debug:');
-  console.log('  isConnected:', isConnected);
-  console.log('  isAdmin:', isAdmin);
-  console.log('  account:', account);
-  console.log('  isSwitching:', isSwitching);
+  }, [account]);
 
   // ============================================
   // Tampilan: Loading (Verifikasi atau Switching)
@@ -50,14 +33,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         <p className="mt-4 text-gray-600">
-          {isSwitching ? 'Mengganti wallet...' : 'Memeriksa akses...'}
+          {isSwitching ? 'Mengganti wallet...' : 'Verifikasi akses...'}
         </p>
       </div>
     );
   }
 
   // ============================================
-  // ⚠️ HANYA TAMPILKAN INI JIKA METAMASK BELUM TERHUBUNG
+  // Tampilan: Belum connect MetaMask
   // ============================================
   if (!isConnected) {
     return (
@@ -80,18 +63,19 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   // ============================================
-  // ✅ SUDAH CONNECT TAPI BUKAN ADMIN → Tampilkan "Akses Ditolak"
+  // Tampilan: Bukan admin (TANPA wallet address)
   // ============================================
-  if (isConnected && !isAdmin) {
+  if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] p-4">
         <div className="bg-red-50 border border-red-200 rounded-lg shadow-lg p-8 max-w-md w-full text-center">
           <div className="text-6xl mb-4">⛔</div>
           <h2 className="text-2xl font-bold text-red-600 mb-2">Akses Ditolak</h2>
           <p className="text-gray-700 mb-6">
-            Wallet Anda tidak memiliki izin untuk mengakses halaman ini.
+            Anda tidak memiliki izin untuk mengakses halaman ini.
           </p>
           
+          {/* ✅ Tombol Ganti Wallet */}
           <button
             onClick={switchWallet}
             disabled={isSwitching}
@@ -105,20 +89,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   // ============================================
-  // ✅ SUDAH CONNECT DAN ADMIN → Tampilkan halaman
+  // Jika admin, tampilkan children
   // ============================================
-  if (isConnected && isAdmin) {
-    return <>{children}</>;
-  }
-
-  // ============================================
-  // Fallback (seharusnya tidak pernah sampai sini)
-  // ============================================
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh]">
-      <p className="text-gray-600">Loading...</p>
-    </div>
-  );
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;

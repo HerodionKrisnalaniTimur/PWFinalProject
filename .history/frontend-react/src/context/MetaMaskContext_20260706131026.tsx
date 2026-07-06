@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 
+// ============================================
+// TYPE DECLARATIONS
+// ============================================
 declare global {
   interface Window {
     ethereum?: any;
@@ -12,7 +15,7 @@ interface MetaMaskContextType {
   isConnected: boolean;
   error: string | null;
   isAdmin: boolean;
-  isSwitching: boolean;
+  isSwitching: boolean; // ✅ Tambahkan ini
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
   switchWallet: () => Promise<void>;
@@ -22,8 +25,14 @@ interface MetaMaskProviderProps {
   children: ReactNode;
 }
 
+// ============================================
+// CONSTANTS
+// ============================================
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000/api';
 
+// ============================================
+// CONTEXT
+// ============================================
 const MetaMaskContext = createContext<MetaMaskContextType | undefined>(undefined);
 
 export const useMetaMask = () => {
@@ -34,13 +43,19 @@ export const useMetaMask = () => {
   return context;
 };
 
+// ============================================
+// PROVIDER
+// ============================================
 export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) => {
   const [account, setAccount] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isSwitching, setIsSwitching] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false); // ✅ Tambahkan state switching
 
+  // ============================================
+  // Ambil admin wallet dari backend
+  // ============================================
   const fetchAdminWallet = async (): Promise<string | null> => {
     try {
       const response = await axios.get(`${API_URL}/admin/config/wallet`);
@@ -54,6 +69,9 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
     }
   };
 
+  // ============================================
+  // Cek apakah address adalah admin
+  // ============================================
   const checkAdminStatus = async (address: string): Promise<boolean> => {
     if (!address) return false;
     
@@ -63,7 +81,7 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
       
       const isAdminWallet = address.toLowerCase() === admin.toLowerCase();
       setIsAdmin(isAdminWallet);
-      console.log('🔍 Admin check:', { address, admin, isAdminWallet });
+      
       return isAdminWallet;
     } catch (err) {
       console.error('Error checking admin status:', err);
@@ -71,6 +89,9 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
     }
   };
 
+  // ============================================
+  // Connect ke MetaMask
+  // ============================================
   const connectWallet = async () => {
     if (!window.ethereum) {
       setError('MetaMask tidak terinstall!');
@@ -97,26 +118,36 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
     }
   };
 
+  // ============================================
+  // Disconnect wallet
+  // ============================================
   const disconnectWallet = () => {
     setAccount(null);
     setIsConnected(false);
     setIsAdmin(false);
   };
 
+  // ============================================
+  // ✅ SWITCH WALLET - TANPA reset state dulu
+  // ============================================
   const switchWallet = async () => {
     if (!window.ethereum) {
       alert('⚠️ Silahkan install MetaMask terlebih dahulu!');
       return;
     }
 
+    // ✅ Set switching state agar tampil loading
     setIsSwitching(true);
 
     try {
+      // 🔥 Panggil wallet_requestPermissions untuk membuka popup
+      // TANPA reset state terlebih dahulu
       await window.ethereum.request({
         method: 'wallet_requestPermissions',
         params: [{ eth_accounts: {} }],
       });
 
+      // Ambil account yang dipilih
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts',
       });
@@ -135,46 +166,17 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
         console.error('Gagal mengganti wallet:', error);
       }
     } finally {
+      // ✅ Selesai switching
       setIsSwitching(false);
     }
   };
 
   // ============================================
-  // ✅ CEK APAKAH METAMASK SUDAH TERHUBUNG SAAT PERTAMA KALI
-  // ============================================
-  useEffect(() => {
-    const checkIfAlreadyConnected = async () => {
-      if (window.ethereum) {
-        try {
-          const accounts = await window.ethereum.request({
-            method: 'eth_accounts'
-          });
-          
-          if (accounts && accounts.length > 0) {
-            const connectedAccount = accounts[0];
-            setAccount(connectedAccount);
-            setIsConnected(true);
-            await checkAdminStatus(connectedAccount);
-            console.log('✅ MetaMask sudah terhubung:', connectedAccount);
-          } else {
-            console.log('ℹ️ MetaMask belum terhubung');
-          }
-        } catch (error) {
-          console.error('Error checking connection:', error);
-        }
-      }
-    };
-
-    checkIfAlreadyConnected();
-  }, []);
-
-  // ============================================
-  // Listener untuk perubahan account
+  // Listener untuk perubahan account di MetaMask
   // ============================================
   useEffect(() => {
     if (window.ethereum) {
       const handleAccountsChanged = async (accounts: string[]) => {
-        console.log('🔄 Account changed:', accounts);
         if (accounts.length > 0) {
           const newAccount = accounts[0];
           setAccount(newAccount);
@@ -201,7 +203,7 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
       isConnected,
       error,
       isAdmin,
-      isSwitching,
+      isSwitching, // ✅ Ekspor isSwitching
       connectWallet,
       disconnectWallet,
       switchWallet,
