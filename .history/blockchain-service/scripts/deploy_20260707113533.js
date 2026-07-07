@@ -67,7 +67,7 @@ async function main() {
   }
 
   // 🔥 OTOMATISASI: Simpan object alamat ke file JSON di dalam folder src frontend
-  const dirPath = path.join(__dirname, "../../frontend-react/src/constants/addresses.json");
+  const dirPath = path.join(__dirname, "../src/constants");
   if (!fs.existsSync(dirPath)){
       fs.mkdirSync(dirPath, { recursive: true }); // Buat folder constants jika belum ada
   }

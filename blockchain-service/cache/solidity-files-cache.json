@@ -1,10 +1,10 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
-    "D:\\Universitas Amikom Yogyakarta\\Semester 4\\Pemrog WEB\\PWFinalProject\\PWFinalProject\\blockchain-service\\contracts\\MockUSDT.sol": {
-      "lastModificationDate": 1779600420838,
-      "contentHash": "ae0e77455915e5faa40deac2574e32f9",
-      "sourceName": "contracts/MockUSDT.sol",
+    "/Users/user/Documents/Pweb/PWFinalProject/blockchain-service/contracts/Faucet.sol": {
+      "lastModificationDate": 1783397608539,
+      "contentHash": "44feb6737e147e178c31f27121f755a8",
+      "sourceName": "contracts/Faucet.sol",
       "solcConfig": {
         "version": "0.8.20",
         "settings": {
@@ -34,13 +34,14 @@
         "^0.8.20"
       ],
       "artifacts": [
-        "MockUSDT"
+        "Faucet",
+        "IERC20"
       ]
     },
-    "D:\\Universitas Amikom Yogyakarta\\Semester 4\\Pemrog WEB\\PWFinalProject\\PWFinalProject\\blockchain-service\\contracts\\SimpleSwap.sol": {
-      "lastModificationDate": 1781626096397,
-      "contentHash": "008a6b2d7b65fe96c0fad0880138e334",
-      "sourceName": "contracts/SimpleSwap.sol",
+    "/Users/user/Documents/Pweb/PWFinalProject/blockchain-service/contracts/LiquiditySwap.sol": {
+      "lastModificationDate": 1783321328715,
+      "contentHash": "43aeadc3ee009da86e3a9f98e51f76d7",
+      "sourceName": "contracts/LiquiditySwap.sol",
       "solcConfig": {
         "version": "0.8.20",
         "settings": {
@@ -74,10 +75,10 @@
         "SimpleSwap"
       ]
     },
-    "D:\\Universitas Amikom Yogyakarta\\Semester 4\\Pemrog WEB\\PWFinalProject\\PWFinalProject\\blockchain-service\\contracts\\Test.sol": {
-      "lastModificationDate": 1780835801557,
-      "contentHash": "0ad0de9f9bfd04c38f82d5e19f50b256",
-      "sourceName": "contracts/Test.sol",
+    "/Users/user/Documents/Pweb/PWFinalProject/blockchain-service/contracts/MockUSDT.sol": {
+      "lastModificationDate": 1783321328715,
+      "contentHash": "1e60c6f0b116ce182a90aa209b35abcc",
+      "sourceName": "contracts/MockUSDT.sol",
       "solcConfig": {
         "version": "0.8.20",
         "settings": {
@@ -107,13 +108,13 @@
         "^0.8.20"
       ],
       "artifacts": [
-        "Test"
+        "MockUSDT"
       ]
     },
-    "D:\\Universitas Amikom Yogyakarta\\Semester 4\\Pemrog WEB\\PWFinalProject\\PWFinalProject\\blockchain-service\\contracts\\ZentrixToken.sol": {
-      "lastModificationDate": 1781626096398,
-      "contentHash": "04b5e1e68847598d503646a588b5f0e3",
-      "sourceName": "contracts/ZentrixToken.sol",
+    "/Users/user/Documents/Pweb/PWFinalProject/blockchain-service/contracts/MultiToken.sol": {
+      "lastModificationDate": 1783321328715,
+      "contentHash": "8681f1cb747b87ffafaee4bb5a7a27ac",
+      "sourceName": "contracts/MultiToken.sol",
       "solcConfig": {
         "version": "0.8.20",
         "settings": {
@@ -143,7 +144,7 @@
         "^0.8.20"
       ],
       "artifacts": [
-        "ZentrixToken"
+        "MultiToken"
       ]
     }
   }
