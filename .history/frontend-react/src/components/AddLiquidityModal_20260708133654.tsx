@@ -13,6 +13,7 @@ import {
   fetchAllTokenBalances,
   executeAddLiquidity,
   getAllPools,
+  addLiquidityHistory,
 } from "../services/poolService";
 import { usePoints } from "../context/PointsContext";
 
@@ -158,10 +159,12 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
       );
 
       if (res && res.hash) {
-        // Catatan: addLiquidityHistory TIDAK perlu dipanggil di sini lagi,
-        // karena executeAddLiquidity() di poolService.ts sudah mencatatnya
-        // secara otomatis. Memanggilnya lagi di sini menyebabkan histori
-        // tercatat dua kali (duplikat).
+        addLiquidityHistory(
+          walletAddress,
+          selectedToken,
+          amountNumber,
+          res.hash
+        );
         addActivity(
           "Liquidity Pool",
           `Provided ${amount} ${selectedToken} liquidity`,
