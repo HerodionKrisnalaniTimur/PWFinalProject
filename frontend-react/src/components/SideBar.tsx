@@ -57,10 +57,10 @@ const Sidebar = () => {
         `}
       >
         <div className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center text-white font-bold italic shadow-lg shadow-blue-200">Z</div>
-            <h1 className="text-2xl font-bold tracking-tight whitespace-nowrap">Zentrix</h1>
-          </div>
+          <Link to="/" className="flex items-center gap-3 group">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center text-white font-bold italic shadow-lg shadow-blue-200 transition-transform group-hover:scale-105">Z</div>
+            <h1 className="text-2xl font-bold tracking-tight whitespace-nowrap transition-colors group-hover:text-blue-600">Zentrix</h1>
+          </Link>
           <button
             onClick={() => toggleOpen(false)}
             className="text-gray-400 hover:text-gray-700 bg-white/60 p-1.5 rounded-lg shadow-sm hover:bg-white transition-all"

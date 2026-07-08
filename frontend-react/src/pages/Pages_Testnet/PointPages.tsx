@@ -72,7 +72,7 @@ const PointsPage = () => {
     nextTier = "Platinum";
     pointsNeeded = 5000 - userPoints;
     tierBadge = "Pro Trader";
-  }
+  } 
   const [selectedItem, setSelectedItem] = useState<any>(null); 
   const [quantity, setQuantity] = useState(1); 
   const [cart, setCart] = useState<any[]>([]);

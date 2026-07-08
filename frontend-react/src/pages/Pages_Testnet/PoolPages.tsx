@@ -57,8 +57,8 @@ const PoolPage = () => {
 
   const [globalStats, setGlobalStats] =
     useState<PoolStats>({
-      tvl: 15.8,
-      apr: 24.8,
+      tvl: 0,
+      apr: 0,
       activePositions: 0,
     });
 

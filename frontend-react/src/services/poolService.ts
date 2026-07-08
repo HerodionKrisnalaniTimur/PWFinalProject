@@ -1,17 +1,16 @@
 import { ethers } from "ethers";
+import addresses from "../constants/addresses.json" with { type: "json" };
 
 // KONFIGURASI ALAMAT SMART CONTRACT
-
 export const CONTRACT_ADDRESSES = {
-  SWAP_CONTRACT: "0xAde571eC4298C8EA76c2D61B19d061a03818E361",
-  POOL_CONTRACT: "0xAde571eC4298C8EA76c2D61B19d061a03818E361",
-
-  TOKEN_USDT: "0x11D56A540f78B91dE5008e57766b6e0ae41293b2",
-  TOKEN_ZTX: "0xda59Fc7E984f202dDA3a3bFDE40bE7c099274fdc",
-  TOKEN_AGT: "0x7ECc4A5892743872CBbB1d10c0166C85f100bE43",
-  TOKEN_TOG: "0x89e6D99500EaEd118caBb8a8712498031F76c6AA",
-  TOKEN_DGH: "0x868533c2c6597cEACB02685Aa4FD06225829e5F7",
-  TOKEN_MJK: "0x9b4B1d116147B7964EDEdC9098Df88eE75C6fd60",
+    SWAP_CONTRACT: addresses.SWAP,
+    POOL_CONTRACT: addresses.SWAP, // Menggunakan address SWAP yang sama
+    TOKEN_USDT: addresses.USDT,
+    TOKEN_ZTX: addresses.ZTX,
+    TOKEN_AGT: addresses.AGT,
+    TOKEN_TOG: addresses.TOG,
+    TOKEN_DGH: addresses.DGH,
+    TOKEN_MJK: addresses.MJK,
 };
 
 export const ERC20_ABI = [

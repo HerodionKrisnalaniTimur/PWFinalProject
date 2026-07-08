@@ -22,6 +22,7 @@ Route::get('/articles/{id}', [ArticleController::class, 'show']);
 // Public Point Activity routes
 Route::get('/point-activities', [PointActivityController::class, 'index']);
 Route::get('/point-activities/{id}', [PointActivityController::class, 'show']);
+Route::post('/point-activities', [PointActivityController::class, 'store']); // dipindah ke sini, tidak butuh login/token
 
 // ============================================
 // ADMIN ROUTES (Dengan Verifikasi Wallet)
@@ -45,7 +46,6 @@ Route::prefix('admin')->group(function () {
 // ============================================
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('/point-activities', [PointActivityController::class, 'store']);
     Route::put('/point-activities/{id}', [PointActivityController::class, 'update']);
     Route::delete('/point-activities/{id}', [PointActivityController::class, 'destroy']);
 });

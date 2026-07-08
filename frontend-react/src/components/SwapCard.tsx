@@ -211,7 +211,7 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
         </div>
 
         {/* SWAP ICON BUTTON */}
-        <div className="absolute left-1/2 top-[35%] -translate-x-1/2 -translate-y-1/2 z-10">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
           <motion.button
             whileHover={{ scale: 1.1, rotate: 180 }}
             whileTap={{ scale: 0.9 }}
