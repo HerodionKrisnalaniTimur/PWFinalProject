@@ -1,11 +1,12 @@
 import { ChevronDown, Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Lock scroll saat mobile menu terbuka
   useEffect(() => {
@@ -25,6 +26,19 @@ export default function Navbar() {
         behavior: "smooth",
         block: "start",
       });
+    }
+  };
+
+  // Klik logo: kalau sudah di landing page, scroll ke hero.
+  // Kalau lagi di halaman lain, navigate dulu ke "/" baru scroll ke hero.
+  const handleLogoClick = () => {
+    if (location.pathname === "/") {
+      scrollToSection("hero");
+    } else {
+      navigate("/");
+      setTimeout(() => {
+        scrollToSection("hero");
+      }, 300);
     }
   };
 
@@ -54,7 +68,7 @@ export default function Navbar() {
         <motion.div
           whileHover={{ scale: 1.03 }}
           className="flex items-center gap-2 sm:gap-3 cursor-pointer"
-          onClick={() => scrollToSection("hero")}
+          onClick={handleLogoClick}
         >
           <div className="w-3 h-3 bg-blue-600 rotate-45 rounded-sm"></div>
 
