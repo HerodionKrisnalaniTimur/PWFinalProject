@@ -12,8 +12,6 @@ contract SimpleSwap {
     address public owner;
 
     // Mapping Alamat Token -> Nilai Token terhadap USDT (Skala Pengali basis 100)
-    // Contoh: ZTX bernilai 0.7 USDT -> Diinput 70
-    // Contoh: AGT bernilai 2.0 USDT -> Diinput 200
     mapping(address => uint256) public tokenRates;
     mapping(address => bool) public isSupportedToken;
 

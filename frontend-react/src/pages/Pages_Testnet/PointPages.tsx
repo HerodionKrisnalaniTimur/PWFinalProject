@@ -35,7 +35,7 @@ declare global {
   }
 }
 
-// 1. DATA REWARD BARU DI SINI (ID, STUDIO, NAMA ITEM, HARGA, GAMBAR, TAG PROMO)
+// DATA REWARD BARU DI SINI (ID, STUDIO, NAMA ITEM, HARGA, GAMBAR, TAG PROMO)
 const rewardItems = [
   { id: 1, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Baileys Collector's Pin", price: 1500, img: baileysPin, tag: "New" },
   { id: 2, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Lua Collector's Pin", price: 2500, img: luaPin, tag: "New" },
@@ -51,7 +51,7 @@ const rewardItems = [
 const PointsPage = () => {
   const [loading, setLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
-  const { userPoints, recentActivity } = usePoints();
+  const { userPoints, recentActivity, fetchUserActivities } = usePoints();
   let currentTier = "Silver";
   let nextTier = "Gold";
   let pointsNeeded = 1000 - userPoints;
@@ -72,7 +72,7 @@ const PointsPage = () => {
     nextTier = "Platinum";
     pointsNeeded = 5000 - userPoints;
     tierBadge = "Pro Trader";
-  }
+  } 
   const [selectedItem, setSelectedItem] = useState<any>(null); 
   const [quantity, setQuantity] = useState(1); 
   const [cart, setCart] = useState<any[]>([]);
@@ -83,10 +83,13 @@ const PointsPage = () => {
 
   // Simulasi memuat data aktivitas poin
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const loadData = async () => {
+      if (walletAddress) {
+        await fetchUserActivities(walletAddress);
+      }
       setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
+    };
+    loadData();
   }, [walletAddress]);
 
   // Cek koneksi akun otomatis saat pertama kali dApp dibuka

@@ -74,12 +74,12 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
     }
     setLoadingRate(true);
     try {
-      // 1. Ambil rate masing-masing token secara on-chain terpisah sesuai aturan swapService
+      // Ambil rate masing-masing token secara on-chain terpisah sesuai aturan swapService
       const rateFrom = await fetchLiveTokenRate(from);
       const rateTo = await fetchLiveTokenRate(to);
       
       if (rateTo > 0) {
-        // 2. Terapkan rumus konversi multi-token: (Jumlah Input * Rate Asal) / Rate Tujuan
+        // Terapkan rumus konversi multi-token: (Jumlah Input * Rate Asal) / Rate Tujuan
         const estimatedAmount = (parseFloat(amount) * rateFrom) / rateTo;
         setToAmount(estimatedAmount.toFixed(4));
       } else {
@@ -126,7 +126,7 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
         message: `Berhasil Swap! Transaksi Anda telah dikonfirmasi` 
       });
 
-      addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, 50);
+      addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, 50, walletAddress, "Sepolia Testnet");
       setFromAmount("");
       setToAmount("");
       loadBalances();
@@ -211,7 +211,7 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
         </div>
 
         {/* SWAP ICON BUTTON */}
-        <div className="absolute left-1/2 top-[35%] -translate-x-1/2 -translate-y-1/2 z-10">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
           <motion.button
             whileHover={{ scale: 1.1, rotate: 180 }}
             whileTap={{ scale: 0.9 }}

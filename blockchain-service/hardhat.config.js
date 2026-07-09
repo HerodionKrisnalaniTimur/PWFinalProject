@@ -12,7 +12,7 @@ module.exports = {
   },
   etherscan: {
     apiKey: {
-      sepolia: "NXN1BYM111WQ797AQD18ATST1W7Y5WHESF"  // ← ganti ini
+      sepolia: process.env.ETHERSCAN_API_KEY 
     }
   }
 };
