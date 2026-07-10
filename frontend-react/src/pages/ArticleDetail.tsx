@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Edit, Trash2 } from 'lucide-react'; 
 import Navbar from '../components/Navbar'; 
 import Footer from './Footer'; 
+import { useMetaMask } from '../context/MetaMaskContext';
 
 interface Article {
   id: number;
@@ -16,6 +17,7 @@ const ArticleDetail = () => {
   // Menangkap ID dari URL (contoh: /news/1)
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin, account } = useMetaMask();
   const [article, setArticle] = useState<Article | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -35,17 +37,29 @@ const ArticleDetail = () => {
       });
   }, [id]);
 
-  // Fungsi untuk menghapus artikel
+  // Fungsi untuk menghapus artikel (hanya bisa dipanggil oleh admin)
   const handleDelete = async () => {
+    if (!isAdmin) {
+      alert('⛔ Anda tidak memiliki akses admin untuk menghapus artikel.');
+      return;
+    }
+
     if (window.confirm("Yakin ingin menghapus artikel ini? Tindakan ini tidak bisa dibatalkan.")) {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/api/articles/${id}`, {
+        const response = await fetch(`http://127.0.0.1:8000/api/admin/articles/${id}`, {
           method: 'DELETE',
+          headers: {
+            'X-Wallet-Address': account || '',
+          },
         });
 
         if (response.ok) {
           alert("Artikel berhasil dihapus.");
           navigate('/news'); // Lempar kembali ke daftar berita
+        } else if (response.status === 403) {
+          alert('⛔ Anda tidak memiliki akses admin!');
+        } else {
+          alert('Gagal menghapus artikel.');
         }
       } catch (error) {
         alert("Terjadi kesalahan saat menghapus data.");
@@ -66,8 +80,8 @@ const ArticleDetail = () => {
             <ArrowLeft size={18} className="mr-2" /> Kembali ke Berita
           </Link>
 
-          {/* Tombol Edit & Hapus (Hanya muncul kalau datanya sudah ada) */}
-          {article && (
+          {/* Tombol Edit & Hapus (Hanya muncul kalau datanya sudah ada DAN user adalah admin) */}
+          {article && isAdmin && (
             <div className="flex gap-3">
               <Link to={`/admin/edit/${article.id}`} className="flex items-center px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm font-semibold shadow-sm">
                 <Edit size={16} className="mr-2" /> Edit
