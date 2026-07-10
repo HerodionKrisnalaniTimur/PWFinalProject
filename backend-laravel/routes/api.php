@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\PointActivityController;
 use App\Http\Controllers\AdminConfigController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 
 // ============================================
 // PUBLIC ROUTES (Tanpa Verifikasi)
@@ -38,6 +39,11 @@ Route::prefix('admin')->group(function () {
         Route::post('/articles', [AdminArticleController::class, 'store']);
         Route::put('/articles/{id}', [AdminArticleController::class, 'update']);
         Route::delete('/articles/{id}', [AdminArticleController::class, 'destroy']);
+
+        // ENDPOINT 3: Admin User Management
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::patch('/users/{id}/role', [AdminUserController::class, 'updateRole']);
+        Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
     });
 });
 

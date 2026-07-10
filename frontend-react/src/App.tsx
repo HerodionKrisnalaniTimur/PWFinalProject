@@ -23,6 +23,7 @@ import ScrollToTopButton from './components/ScrollToTopButton';
 import { MetaMaskProvider } from './context/MetaMaskContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './pages/AdminDashboard'; // ✅ TAMBAHKAN INI
+import ManageUsers from './pages/ManageUsers';
 
 // Landing Page Component
 const LandingPage = () => (
@@ -92,6 +93,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <EditArticle />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/users" 
+              element={
+                <ProtectedRoute>
+                  <ManageUsers />
                 </ProtectedRoute>
               } 
             />
