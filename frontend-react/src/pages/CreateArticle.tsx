@@ -67,8 +67,11 @@ const CreateArticle = () => {
         // ============================================
         if (response.status === 403) {
           alert('⛔ Anda tidak memiliki akses admin!');
+        } else if (data.errors) {
+          const firstError = Object.values(data.errors)[0];
+          alert('Gagal menyimpan: ' + (Array.isArray(firstError) ? firstError[0] : firstError));
         } else {
-          alert('Gagal menyimpan: ' + (data.message || 'Cek kembali isianmu.'));
+          alert('Gagal menyimpan: ' + (data.message || 'Terjadi kesalahan, silakan cek kembali isianmu.'));
         }
       }
     } catch (error) {

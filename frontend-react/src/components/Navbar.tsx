@@ -17,15 +17,45 @@ export default function Navbar() {
     };
   }, [open]);
 
-  // Function scroll ke section
-  const scrollToSection = (id: string) => {
+  // Custom smooth scroll pakai requestAnimationFrame
+  // (lebih reliable daripada scrollIntoView bawaan browser, terutama di Safari/iOS
+  // atau saat elemen baru mount setelah navigate)
+  const smoothScrollTo = (targetY: number, duration = 700) => {
+    const startY = window.scrollY;
+    const diff = targetY - startY;
+    let startTime: number | null = null;
+
+    const easeInOutQuad = (t: number) =>
+      t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+
+    const step = (currentTime: number) => {
+      if (startTime === null) startTime = currentTime;
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      window.scrollTo(0, startY + diff * easeInOutQuad(progress));
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    };
+
+    requestAnimationFrame(step);
+  };
+
+  // Tinggi kira-kira navbar fixed + jarak aman, biar section gak ketutup navbar
+  const NAVBAR_OFFSET = 100;
+
+  // Function scroll ke section (dengan retry kalau elemen belum ke-render)
+  const scrollToSection = (id: string, retries = 5) => {
     const element = document.getElementById(id);
 
     if (element) {
-      element.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+      const targetY =
+        window.scrollY + element.getBoundingClientRect().top - NAVBAR_OFFSET;
+      smoothScrollTo(targetY);
+    } else if (retries > 0) {
+      setTimeout(() => scrollToSection(id, retries - 1), 100);
     }
   };
 
@@ -41,6 +71,24 @@ export default function Navbar() {
       }, 300);
     }
   };
+
+  // Klik menu (Feature, Community, Contact, dll):
+  // kalau sudah di landing page, langsung scroll ke section.
+  // Kalau lagi di halaman lain, navigate dulu ke "/" baru scroll setelah halaman siap.
+  const handleMenuClick = (id: string) => {
+    if (location.pathname === "/") {
+      scrollToSection(id);
+    } else {
+      navigate("/");
+      setTimeout(() => {
+        scrollToSection(id);
+      }, 400);
+    }
+  };
+
+  // Kalau lagi di halaman /news atau /admin (dan sub-route-nya), menu Feature/Community/Contact gak perlu ditampilkan
+  const isNewsPage =
+    location.pathname === "/news" || location.pathname.startsWith("/admin");
 
   // Menu Items
   const menuItems = [
@@ -78,6 +126,7 @@ export default function Navbar() {
         </motion.div>
 
         {/* Desktop Menu */}
+        {!isNewsPage && (
         <div className="hidden lg:flex items-center gap-8 text-sm font-medium text-zinc-700">
 
           {menuItems.map((item) => (
@@ -86,7 +135,7 @@ export default function Navbar() {
               whileHover={{
                 y: -2,
               }}
-              onClick={() => scrollToSection(item.id)}
+              onClick={() => handleMenuClick(item.id)}
               className="relative hover:text-black transition-all duration-300"
             >
               {item.name}
@@ -95,6 +144,7 @@ export default function Navbar() {
             </motion.button>
           ))}
         </div>
+        )}
 
         {/* Right Side */}
         <div className="flex items-center gap-2 sm:gap-4">
@@ -158,7 +208,7 @@ export default function Navbar() {
             {/* Mobile Menu Items */}
             <div className="flex flex-col items-center gap-8 text-3xl font-semibold text-zinc-900">
 
-              {menuItems.map((item, i) => (
+              {!isNewsPage && menuItems.map((item, i) => (
                 <motion.button
                   key={item.id}
                   initial={{
@@ -179,9 +229,16 @@ export default function Navbar() {
                   onClick={() => {
                     setOpen(false);
 
-                    setTimeout(() => {
-                      scrollToSection(item.id);
-                    }, 300);
+                    if (location.pathname === "/") {
+                      setTimeout(() => {
+                        scrollToSection(item.id);
+                      }, 300);
+                    } else {
+                      navigate("/");
+                      setTimeout(() => {
+                        scrollToSection(item.id);
+                      }, 500);
+                    }
                   }}
                   className="transition-all duration-300"
                 >

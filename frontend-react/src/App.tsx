@@ -15,6 +15,7 @@ import ArticleDetail from './pages/ArticleDetail';
 import CreateArticle from './pages/CreateArticle';
 import EditArticle from './pages/EditArticle';
 import FaucetPage from './pages/Faucet/FaucetPage';
+import ScrollToTopButton from './components/ScrollToTopButton';
 
 // ============================================
 // ✅ IMPORT HALAMAN ADMIN DASHBOARD
@@ -96,6 +97,9 @@ function App() {
             />
           </Routes>
         </AnimatePresence>
+
+        {/* Tombol scroll ke atas, muncul di semua halaman setelah user scroll */}
+        <ScrollToTopButton />
       </Router>
     </MetaMaskProvider>
   );
