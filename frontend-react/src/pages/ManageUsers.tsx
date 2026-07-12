@@ -15,7 +15,7 @@ interface UserRow {
 }
 
 const ManageUsers = () => {
-  const { account, isAdmin } = useMetaMask();
+  const { account, isAdmin, isSuperAdmin } = useMetaMask();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
@@ -48,6 +48,11 @@ const ManageUsers = () => {
   }, [account]);
 
   const handleToggleAdmin = async (user: UserRow) => {
+    if (!isSuperAdmin) {
+      alert('⛔ Hanya admin utama yang bisa mengubah role admin.');
+      return;
+    }
+
     const nextValue = !user.is_admin;
     const confirmMsg = nextValue
       ? `Jadikan "${user.name}" sebagai admin?`
@@ -85,6 +90,11 @@ const ManageUsers = () => {
   };
 
   const handleDelete = async (user: UserRow) => {
+    if (user.is_admin && !isSuperAdmin) {
+      alert('⛔ Hanya admin utama yang bisa menghapus admin lain.');
+      return;
+    }
+
     if (!window.confirm(`Yakin ingin menghapus user "${user.name}"? Tindakan ini tidak bisa dibatalkan.`)) {
       return;
     }
@@ -188,28 +198,34 @@ const ManageUsers = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex justify-end gap-2">
-                          <button
-                            onClick={() => handleToggleAdmin(user)}
-                            disabled={actionLoadingId === user.id}
-                            className={`flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                              user.is_admin
-                                ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
-                                : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                            }`}
-                            title={user.is_admin ? 'Cabut akses admin' : 'Jadikan admin'}
-                          >
-                            {user.is_admin ? (
-                              <ShieldOff size={14} className="mr-1.5" />
-                            ) : (
-                              <ShieldCheck size={14} className="mr-1.5" />
-                            )}
-                            {user.is_admin ? 'Cabut Admin' : 'Jadikan Admin'}
-                          </button>
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => handleToggleAdmin(user)}
+                              disabled={actionLoadingId === user.id}
+                              className={`flex items-center px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                                user.is_admin
+                                  ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                              }`}
+                              title={user.is_admin ? 'Cabut akses admin' : 'Jadikan admin'}
+                            >
+                              {user.is_admin ? (
+                                <ShieldOff size={14} className="mr-1.5" />
+                              ) : (
+                                <ShieldCheck size={14} className="mr-1.5" />
+                              )}
+                              {user.is_admin ? 'Cabut Admin' : 'Jadikan Admin'}
+                            </button>
+                          )}
                           <button
                             onClick={() => handleDelete(user)}
-                            disabled={actionLoadingId === user.id}
-                            className="flex items-center px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-xs font-semibold transition-colors"
-                            title="Hapus user"
+                            disabled={actionLoadingId === user.id || (user.is_admin && !isSuperAdmin)}
+                            className="flex items-center px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-red-50"
+                            title={
+                              user.is_admin && !isSuperAdmin
+                                ? 'Hanya admin utama yang bisa menghapus admin lain'
+                                : 'Hapus user'
+                            }
                           >
                             <Trash2 size={14} className="mr-1.5" />
                             Hapus

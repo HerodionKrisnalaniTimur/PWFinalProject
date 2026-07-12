@@ -41,6 +41,19 @@ class UserController extends Controller
             ], 422);
         }
 
+        $superAdminWallet = strtolower((string) env('ADMIN_WALLET_ADDRESS'));
+        $currentWallet = strtolower((string) $request->header('X-Wallet-Address'));
+
+        // Cuma super-admin (wallet dari .env) yang boleh mengubah role
+        // admin/user lain. Admin hasil promote tidak boleh menjadikan
+        // atau mencabut admin siapa pun, termasuk dirinya sendiri.
+        if ($currentWallet !== $superAdminWallet) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya admin utama yang bisa mengubah role admin',
+            ], 403);
+        }
+
         $user = User::find($id);
 
         if (!$user) {
@@ -49,8 +62,6 @@ class UserController extends Controller
                 'message' => 'User tidak ditemukan',
             ], 404);
         }
-
-        $superAdminWallet = strtolower((string) env('ADMIN_WALLET_ADDRESS'));
 
         // Admin utama (dari .env) gak boleh dicabut aksesnya lewat sini,
         // biar sistem selalu punya minimal 1 admin yang gak bisa terkunci.
@@ -106,6 +117,15 @@ class UserController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Admin utama tidak bisa dihapus',
+            ], 403);
+        }
+
+        // Admin hasil promote gak boleh hapus admin lain (termasuk sesama
+        // admin hasil promote) — hanya super-admin yang boleh.
+        if ($user->is_admin && $currentWallet !== $superAdminWallet) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya admin utama yang bisa menghapus admin lain',
             ], 403);
         }
 

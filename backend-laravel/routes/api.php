@@ -33,6 +33,9 @@ Route::prefix('admin')->group(function () {
     
     // ENDPOINT 1: Get admin wallet (tanpa verifikasi)
     Route::get('/config/wallet', [AdminConfigController::class, 'getAdminWallet']);
+
+    // ENDPOINT 1B: Cek status admin per wallet (baca dari database)
+    Route::get('/config/check-admin/{wallet}', [AdminConfigController::class, 'checkAdminStatus']);
     
     // ENDPOINT 2: Admin Article Management (dengan verifikasi)
     Route::middleware(['admin.wallet'])->group(function () {
