@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
@@ -40,17 +41,52 @@ class ArticleController extends Controller
     }
 
     /**
-     * Upload file gambar ke storage/app/public/articles
-     * dan kembalikan URL publik lengkapnya.
+     * Upload file gambar ke ImageKit dan kembalikan URL publiknya.
+     * URL ini bisa diakses siapa pun, dari mana pun (bukan cuma localhost).
      */
     private function uploadImage($file): string
     {
-        // Simpan ke disk "public", folder "articles"
-        $path = $file->store('articles', 'public');
+        $response = Http::withBasicAuth(env('IMAGEKIT_PRIVATE_KEY'), '')
+            ->attach(
+                'file',
+                file_get_contents($file->getRealPath()),
+                $file->getClientOriginalName()
+            )
+            ->post('https://upload.imagekit.io/api/v1/files/upload', [
+                'fileName' => $file->getClientOriginalName(),
+                'useUniqueFileName' => 'true',
+                'folder' => '/articles',
+            ]);
 
-        // Hasilkan URL lengkap, contoh:
-        // http://127.0.0.1:8000/storage/articles/namafile.jpg
-        return asset(Storage::url($path));
+        if (!$response->successful()) {
+            throw new \Exception('Upload ke ImageKit gagal: ' . $response->body());
+        }
+
+        return $response->json('url');
+    }
+
+    /**
+     * Hapus gambar lama dari storage lokal, HANYA kalau gambar itu
+     * memang masih tersimpan lokal (peninggalan sebelum pindah ke ImageKit).
+     * Gambar yang sudah di ImageKit tidak dihapus otomatis dari sini.
+     */
+    private function deleteLocalImageIfAny(?string $imageUrl): void
+    {
+        if (!$imageUrl) {
+            return;
+        }
+
+        $localPrefix = asset('storage') . '/';
+
+        if (!str_starts_with($imageUrl, $localPrefix)) {
+            // Bukan file lokal (misal sudah di ImageKit) -> skip
+            return;
+        }
+
+        $oldPath = str_replace($localPrefix, '', $imageUrl);
+        if (Storage::disk('public')->exists($oldPath)) {
+            Storage::disk('public')->delete($oldPath);
+        }
     }
 
     /**
@@ -138,14 +174,7 @@ class ArticleController extends Controller
 
             // Kalau ada gambar baru diupload, ganti gambar lama
             if ($request->hasFile('image')) {
-                // Hapus gambar lama dari storage kalau ada, biar tidak menumpuk file sampah
-                if ($article->image) {
-                    $oldPath = str_replace(asset('storage') . '/', '', $article->image);
-                    if (Storage::disk('public')->exists($oldPath)) {
-                        Storage::disk('public')->delete($oldPath);
-                    }
-                }
-
+                $this->deleteLocalImageIfAny($article->image);
                 $data['image'] = $this->uploadImage($request->file('image'));
             }
 
@@ -180,13 +209,8 @@ class ArticleController extends Controller
         }
 
         try {
-            // Hapus juga file gambarnya dari storage
-            if ($article->image) {
-                $path = str_replace(asset('storage') . '/', '', $article->image);
-                if (Storage::disk('public')->exists($path)) {
-                    Storage::disk('public')->delete($path);
-                }
-            }
+            // Hapus juga file gambarnya dari storage lokal (kalau memang lokal)
+            $this->deleteLocalImageIfAny($article->image);
 
             $article->delete();
 
