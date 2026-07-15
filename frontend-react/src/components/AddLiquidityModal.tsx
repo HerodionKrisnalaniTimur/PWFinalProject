@@ -147,7 +147,7 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
     setTxStatus({
       type: "processing",
       message:
-        "Menunggu konfirmasi tanda tangan/approval transaksi di dompet MetaMask Anda...",
+        "Menunggu konfirmasi transaksi di dompet MetaMask",
     });
 
     try {
@@ -158,10 +158,6 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
       );
 
       if (res && res.hash) {
-        // Catatan: addLiquidityHistory TIDAK perlu dipanggil di sini lagi,
-        // karena executeAddLiquidity() di poolService.ts sudah mencatatnya
-        // secara otomatis. Memanggilnya lagi di sini menyebabkan histori
-        // tercatat dua kali (duplikat).
         addActivity(
           "Liquidity Pool",
           `Provided ${amount} ${selectedToken} liquidity`,
@@ -204,7 +200,7 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
         setTxStatus({
           type: "error",
           message:
-            "Dana (Gas fee ETH / Sepolia) tidak mencukupi di dompet Anda untuk membayar biaya transaksi.",
+            "Dana tidak mencukupi di dompet Anda untuk membayar biaya transaksi.",
         });
       } else {
         setTxStatus({
