@@ -138,7 +138,10 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
       setIsSwitching(false);
     }
   };
-  
+
+  // ============================================
+  // ✅ CEK APAKAH METAMASK SUDAH TERHUBUNG SAAT PERTAMA KALI
+  // ============================================
   useEffect(() => {
     const checkIfAlreadyConnected = async () => {
       if (window.ethereum) {

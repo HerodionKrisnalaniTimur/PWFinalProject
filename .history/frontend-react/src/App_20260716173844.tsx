@@ -44,7 +44,7 @@ const LandingPage = () => (
     <section className="bg-white relative">
       <Feature />
     </section>
-    <section className='bg-white pt-15'>
+    <section className='bg-white pt-18'>
       <Blog />
     </section>
     <Footer />

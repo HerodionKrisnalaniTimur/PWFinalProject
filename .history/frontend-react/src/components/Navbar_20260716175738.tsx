@@ -75,21 +75,13 @@ export default function Navbar() {
   // Klik menu (Feature, Community, Contact, dll):
   // kalau sudah di landing page, langsung scroll ke section.
   // Kalau lagi di halaman lain, navigate dulu ke "/" baru scroll setelah halaman siap.
-  const handleMenuClick = (item: { id?: string; path?: string }) => {
-    // Kalau item punya "path" (mis. News), langsung navigate ke halaman itu
-    if (item.path) {
-      navigate(item.path);
-      return;
-    }
-
-    if (!item.id) return;
-
+  const handleMenuClick = (id: string) => {
     if (location.pathname === "/") {
-      scrollToSection(item.id);
+      scrollToSection(id);
     } else {
       navigate("/");
       setTimeout(() => {
-        scrollToSection(item.id!);
+        scrollToSection(id);
       }, 400);
     }
   };
@@ -99,9 +91,7 @@ export default function Navbar() {
     location.pathname === "/news" || location.pathname.startsWith("/admin");
 
   // Menu Items
-  // Item dengan "path" -> langsung navigate ke halaman lain (mis. News).
-  // Item dengan "id" -> scroll ke section di landing page.
-  const menuItems: { name: string; id?: string; path?: string }[] = [
+  const menuItems = [
     {
       name: "Feature",
       id: "feature",
@@ -111,12 +101,12 @@ export default function Navbar() {
       id: "blog",
     },
     {
-      name: "News",
-      path: "/news",
-    },
-    {
       name: "Contact",
       id: "footer",
+    },
+    {
+      name: "News",
+      path: "/news",
     },
   ];
 
@@ -138,27 +128,80 @@ export default function Navbar() {
             Zentrix
           </span>
         </motion.div>
+        {/* Mobile Menu Items */}
+<div className="flex flex-col items-center gap-8 text-3xl font-semibold text-zinc-900">
+  {!isNewsPage &&
+    menuItems.map((item, i) => (
+      <motion.button
+        key={i}
+        initial={{
+          opacity: 0,
+          y: 40,
+        }}
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        transition={{
+          delay: i * 0.1,
+        }}
+        whileHover={{
+          scale: 1.05,
+          letterSpacing: "0.08em",
+        }}
+        onClick={() => {
+          setOpen(false);
 
-        {/* Desktop Menu */}
-        {!isNewsPage && (
-        <div className="hidden lg:flex items-center gap-8 text-sm font-medium text-zinc-700">
+          if ("path" in item) {
+            navigate(item.path);
+            return;
+          }
 
-          {menuItems.map((item) => (
-            <motion.button
-              key={item.id}
-              whileHover={{
-                y: -2,
-              }}
-              onClick={() => handleMenuClick(item)}
-              className="relative hover:text-black transition-all duration-300"
-            >
-              {item.name}
+          if (location.pathname === "/") {
+            setTimeout(() => {
+              handleMenuClick(item.id);
+            }, 300);
+          } else {
+            navigate("/");
+            setTimeout(() => {
+              handleMenuClick(item.id);
+            }, 500);
+          }
+        }}
+        className="transition-all duration-300"
+      >
+        {item.name}
+      </motion.button>
+    ))}
 
-              <span className="absolute left-0 -bottom-1 w-0 h-[2px] bg-blue-600 transition-all duration-300 hover:w-full"></span>
-            </motion.button>
-          ))}
-        </div>
-        )}
+  {/* CTA Button */}
+  <motion.button
+    initial={{
+      opacity: 0,
+      y: 40,
+    }}
+    animate={{
+      opacity: 1,
+      y: 0,
+    }}
+    transition={{
+      delay: 0.35,
+    }}
+    whileHover={{
+      scale: 1.05,
+    }}
+    whileTap={{
+      scale: 0.95,
+    }}
+    onClick={() => {
+      setOpen(false);
+      navigate("/swap");
+    }}
+    className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-2xl text-base font-medium shadow-lg transition-all"
+  >
+    Join Testnet
+  </motion.button>
+</div>
 
         {/* Right Side */}
         <div className="flex items-center gap-2 sm:gap-4">
@@ -218,87 +261,81 @@ export default function Navbar() {
             >
               <X size={28} />
             </button>
-
             {/* Mobile Menu Items */}
-            <div className="flex flex-col items-center gap-8 text-3xl font-semibold text-zinc-900">
+<div className="flex flex-col items-center gap-8 text-3xl font-semibold text-zinc-900">
+  {!isNewsPage &&
+    menuItems.map((item, i) => (
+      <motion.button
+        key={i}
+        initial={{
+          opacity: 0,
+          y: 40,
+        }}
+        animate={{
+          opacity: 1,
+          y: 0,
+        }}
+        transition={{
+          delay: i * 0.1,
+        }}
+        whileHover={{
+          scale: 1.05,
+          letterSpacing: "0.08em",
+        }}
+        onClick={() => {
+          setOpen(false);
 
-              {!isNewsPage && menuItems.map((item, i) => (
-                <motion.button
-                  key={item.id}
-                  initial={{
-                    opacity: 0,
-                    y: 40,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  transition={{
-                    delay: i * 0.1,
-                  }}
-                  whileHover={{
-                    scale: 1.05,
-                    letterSpacing: "0.08em",
-                  }}
-                  onClick={() => {
-                    setOpen(false);
+          if ("path" in item) {
+            navigate(item.path);
+            return;
+          }
 
-                    // Kalau item punya "path" (mis. News), langsung navigate
-                    if (item.path) {
-                      navigate(item.path);
-                      return;
-                    }
+          if (location.pathname === "/") {
+            setTimeout(() => {
+              handleMenuClick(item.id);
+            }, 300);
+          } else {
+            navigate("/");
+            setTimeout(() => {
+              handleMenuClick(item.id);
+            }, 500);
+          }
+        }}
+        className="transition-all duration-300"
+      >
+        {item.name}
+      </motion.button>
+    ))}
 
-                    if (!item.id) return;
+  {/* CTA Button */}
+  <motion.button
+    initial={{
+      opacity: 0,
+      y: 40,
+    }}
+    animate={{
+      opacity: 1,
+      y: 0,
+    }}
+    transition={{
+      delay: 0.35,
+    }}
+    whileHover={{
+      scale: 1.05,
+    }}
+    whileTap={{
+      scale: 0.95,
+    }}
+    onClick={() => {
+      setOpen(false);
+      navigate("/swap");
+    }}
+    className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-2xl text-base font-medium shadow-lg transition-all"
+  >
+    Join Testnet
+  </motion.button>
+</div>
+tePresence>
 
-                    if (location.pathname === "/") {
-                      setTimeout(() => {
-                        scrollToSection(item.id!);
-                      }, 300);
-                    } else {
-                      navigate("/");
-                      setTimeout(() => {
-                        scrollToSection(item.id!);
-                      }, 500);
-                    }
-                  }}
-                  className="transition-all duration-300"
-                >
-                  {item.name}
-                </motion.button>
-              ))}
-
-              {/* CTA Button */}
-              <motion.button
-                initial={{
-                  opacity: 0,
-                  y: 40,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                transition={{
-                  delay: 0.35,
-                }}
-                whileHover={{
-                  scale: 1.05,
-                }}
-                whileTap={{
-                  scale: 0.95,
-                }}
-                onClick={() => {
-                  setOpen(false);
-                  navigate("/swap");
-                }}
-                className="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-7 py-3 rounded-2xl text-base font-medium shadow-lg transition-all"
-              >
-                Join Testnet
-              </motion.button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </header>
   );
 }

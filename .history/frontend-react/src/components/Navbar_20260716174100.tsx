@@ -75,21 +75,13 @@ export default function Navbar() {
   // Klik menu (Feature, Community, Contact, dll):
   // kalau sudah di landing page, langsung scroll ke section.
   // Kalau lagi di halaman lain, navigate dulu ke "/" baru scroll setelah halaman siap.
-  const handleMenuClick = (item: { id?: string; path?: string }) => {
-    // Kalau item punya "path" (mis. News), langsung navigate ke halaman itu
-    if (item.path) {
-      navigate(item.path);
-      return;
-    }
-
-    if (!item.id) return;
-
+  const handleMenuClick = (id: string) => {
     if (location.pathname === "/") {
-      scrollToSection(item.id);
+      scrollToSection(id);
     } else {
       navigate("/");
       setTimeout(() => {
-        scrollToSection(item.id!);
+        scrollToSection(id);
       }, 400);
     }
   };
@@ -99,9 +91,7 @@ export default function Navbar() {
     location.pathname === "/news" || location.pathname.startsWith("/admin");
 
   // Menu Items
-  // Item dengan "path" -> langsung navigate ke halaman lain (mis. News).
-  // Item dengan "id" -> scroll ke section di landing page.
-  const menuItems: { name: string; id?: string; path?: string }[] = [
+  const menuItems = [
     {
       name: "Feature",
       id: "feature",
@@ -111,13 +101,10 @@ export default function Navbar() {
       id: "blog",
     },
     {
-      name: "News",
-      path: "/news",
-    },
-    {
       name: "Contact",
       id: "footer",
     },
+    
   ];
 
   return (
@@ -149,7 +136,7 @@ export default function Navbar() {
               whileHover={{
                 y: -2,
               }}
-              onClick={() => handleMenuClick(item)}
+              onClick={() => handleMenuClick(item.id)}
               className="relative hover:text-black transition-all duration-300"
             >
               {item.name}
@@ -243,22 +230,14 @@ export default function Navbar() {
                   onClick={() => {
                     setOpen(false);
 
-                    // Kalau item punya "path" (mis. News), langsung navigate
-                    if (item.path) {
-                      navigate(item.path);
-                      return;
-                    }
-
-                    if (!item.id) return;
-
                     if (location.pathname === "/") {
                       setTimeout(() => {
-                        scrollToSection(item.id!);
+                        scrollToSection(item.id);
                       }, 300);
                     } else {
                       navigate("/");
                       setTimeout(() => {
-                        scrollToSection(item.id!);
+                        scrollToSection(item.id);
                       }, 500);
                     }
                   }}
