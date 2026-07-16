@@ -210,7 +210,7 @@ const PoolPage = () => {
 
           setGlobalStats({
             tvl: 0,
-            apr: 24.8,
+            apr: 0,
             activePositions: 0,
           });
 

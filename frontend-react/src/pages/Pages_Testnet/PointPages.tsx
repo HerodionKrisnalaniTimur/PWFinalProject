@@ -51,7 +51,7 @@ const rewardItems = [
 const PointsPage = () => {
   const [loading, setLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
-  const { userPoints, recentActivity, fetchUserActivities } = usePoints();
+  const { userPoints, setUserPoints, recentActivity, addActivity, fetchUserActivities } = usePoints();
   let currentTier = "Silver";
   let nextTier = "Gold";
   let pointsNeeded = 1000 - userPoints;
@@ -79,7 +79,7 @@ const PointsPage = () => {
   const [isCartModalOpen, setIsCartModalOpen] = useState(false); 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isCartBouncing, setIsCartBouncing] = useState(false);
-  const [checkoutAlert, setCheckoutAlert] = useState({ isOpen: false, isSuccess: false, title: "", message: "" }); 
+  const [checkoutAlert, setCheckoutAlert] = useState<{isOpen: boolean, isSuccess: boolean, title: string, message: string, items?: any[]}>({ isOpen: false, isSuccess: false, title: "", message: "", items: [] }); 
 
   // Simulasi memuat data aktivitas poin
   useEffect(() => {
@@ -186,19 +186,54 @@ const handleAddToCart = () => {
     setCart(cart.filter((item: any) => item.id !== id));
   };
 
+  const handleDecreaseQuantity = (id: number) => {
+    setCart(cart.map((item: any) => {
+      if (item.id === id) {
+        return { ...item, quantity: item.quantity - 1 };
+      }
+      return item;
+    }).filter((item: any) => item.quantity > 0));
+  };
+
+  const handleIncreaseQuantity = (id: number) => {
+    setCart(cart.map((item: any) => 
+      item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+    ));
+  };
+
+  // === FIX: kirim walletAddress ke addActivity, dan pastikan wallet sudah terhubung ===
   const handleCheckoutCart = () => {
+    if (!walletAddress) {
+      setIsCartModalOpen(false);
+      setCheckoutAlert({
+        isOpen: true,
+        isSuccess: false,
+        title: "Wallet Belum Terhubung",
+        message: "Silakan hubungkan wallet Anda terlebih dahulu sebelum redeem reward."
+      });
+      return;
+    }
+
     const totalCost = cart.reduce((total: number, item: any) => total + (item.price * item.quantity), 0);
     
     if (userPoints >= totalCost) {
-      setUserPoints(userPoints - totalCost);
-      setCart([]); 
-      setIsCartModalOpen(false); 
+      cart.forEach((item: any) => {
+        addActivity(
+          "Redeem Reward", 
+          `Redeemed ${item.quantity}x ${item.itemName}`, 
+          -(item.price * item.quantity),
+          walletAddress
+        );
+      });
       setCheckoutAlert({
         isOpen: true,
         isSuccess: true,
         title: "Redemption Successful!",
-        message: `You spent ${totalCost.toLocaleString()} PTS. Your remaining balance is: ${userPoints - totalCost} PTS.`
+        message: `You spent ${totalCost.toLocaleString()} PTS. Your remaining balance is: ${(userPoints - totalCost).toLocaleString()} PTS.`,
+        items: cart
       });
+      setCart([]); 
+      setIsCartModalOpen(false); 
     } else {
       setIsCartModalOpen(false); 
       setCheckoutAlert({
@@ -409,7 +444,9 @@ const handleAddToCart = () => {
                         <p className="text-xs text-gray-400 mt-0.5">{activity.description}</p>
                         <p className="text-[10px] text-gray-400 mt-1">{new Date(activity.date).toLocaleString()} • Jaringan Sepolia</p>
                       </div>
-                      <span className="text-sm font-extrabold text-green-600">+{activity.pointsAdded} PTS</span>
+                      <span className={`text-sm font-extrabold ${activity.pointsAdded < 0 ? 'text-red-500' : 'text-green-600'}`}>
+                        {activity.pointsAdded > 0 ? '+' : ''}{activity.pointsAdded} PTS
+                      </span>
                     </div>
                   ))
                 ) : (
@@ -481,7 +518,14 @@ const handleAddToCart = () => {
                            </div>
                            <div className="flex-1">
                              <h4 className="text-sm font-bold text-gray-800 leading-tight mb-1 pr-6">{item.itemName}</h4>
-                             <p className="text-xs text-[#27BDE2] font-black">{item.price.toLocaleString()} PTS <span className="text-gray-400 font-medium">x {item.quantity}</span></p>
+                             <div className="flex items-center gap-3">
+                               <p className="text-xs text-[#27BDE2] font-black">{item.price.toLocaleString()} PTS</p>
+                               <div className="flex items-center border border-gray-200 rounded-md bg-white">
+                                 <button onClick={() => handleDecreaseQuantity(item.id)} className="w-6 py-0.5 text-gray-500 hover:bg-gray-100 font-bold transition-colors text-xs rounded-l-md">-</button>
+                                 <span className="w-6 text-center text-xs font-bold text-gray-800 border-l border-r border-gray-200">{item.quantity}</span>
+                                 <button onClick={() => handleIncreaseQuantity(item.id)} className="w-6 py-0.5 text-gray-500 hover:bg-gray-100 font-bold transition-colors text-xs rounded-r-md">+</button>
+                               </div>
+                             </div>
                            </div>
                            <button onClick={() => handleRemoveFromCart(item.id)} className="text-gray-300 hover:text-red-500 absolute top-3 right-3 transition-colors bg-white rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100">
                              <Trash2 size={16} />
@@ -509,14 +553,21 @@ const handleAddToCart = () => {
           )}
           {checkoutAlert.isOpen && (
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[90] flex items-center justify-center p-4">
-              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-[24px] w-full max-w-sm overflow-hidden shadow-2xl border border-gray-100 flex flex-col text-center p-6 sm:p-8">
+              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-[24px] w-full max-w-md overflow-hidden shadow-2xl border border-gray-100 flex flex-col text-center p-6 sm:p-8 relative">
                 
                 {/* Ikon Sukses / Gagal */}
                 <div className="flex justify-center mb-4">
                   {checkoutAlert.isSuccess ? (
-                    <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center">
-                      <CheckCircle size={32} />
-                    </div>
+                    <motion.div 
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", stiffness: 200, damping: 15 }}
+                      className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center relative"
+                    >
+                      {/* Simple CSS Glow effect */}
+                      <div className="absolute inset-0 bg-green-400 rounded-full blur-xl opacity-30 animate-pulse"></div>
+                      <CheckCircle size={40} className="relative z-10" />
+                    </motion.div>
                   ) : (
                     <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center">
                       <AlertCircle size={32} />
@@ -524,16 +575,38 @@ const handleAddToCart = () => {
                   )}
                 </div>
 
-                <h3 className="text-xl font-black text-gray-900 mb-2">{checkoutAlert.title}</h3>
-                <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                <h3 className="text-2xl font-black text-gray-900 mb-2">{checkoutAlert.title}</h3>
+                <p className="text-gray-500 text-sm mb-6 leading-relaxed">
                   {checkoutAlert.message}
                 </p>
 
+                {/* Display Redeemed Items */}
+                {checkoutAlert.isSuccess && checkoutAlert.items && checkoutAlert.items.length > 0 && (
+                  <div className="mb-8 flex flex-wrap justify-center gap-3">
+                    {checkoutAlert.items.map((item, idx) => (
+                      <motion.div 
+                        key={idx}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 + (idx * 0.1) }}
+                        className="bg-[#F8F9FA] border border-gray-200 rounded-2xl p-3 flex flex-col items-center shadow-sm w-28"
+                      >
+                        <div className="w-16 h-16 relative flex items-center justify-center mb-2">
+                          <div className="absolute inset-0 bg-[#27BDE2] blur-md opacity-20 rounded-full"></div>
+                          <img src={item.img} alt={item.itemName} className="w-full h-full object-contain relative z-10 drop-shadow-md" />
+                        </div>
+                        <span className="text-[10px] font-bold text-gray-700 leading-tight line-clamp-2 min-h-[28px]">{item.itemName}</span>
+                        <span className="text-[10px] text-gray-400 font-medium mt-1 bg-white px-2 py-0.5 rounded-full border border-gray-200">Qty: {item.quantity}</span>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
                 <button
-                  onClick={() => setCheckoutAlert({ ...checkoutAlert, isOpen: false })}
-                  className={`w-full text-white font-bold py-3.5 rounded-x
-                    
-                    l transition-all shadow-md transform hover:-translate-y-0.5 ${checkoutAlert.isSuccess ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}>Close
+                  onClick={() => setCheckoutAlert({ ...checkoutAlert, isOpen: false, items: [] })}
+                  className={`w-full text-white font-bold py-4 rounded-xl transition-all shadow-md transform hover:-translate-y-0.5 ${checkoutAlert.isSuccess ? 'bg-[#27BDE2] hover:bg-[#1E9EBD]' : 'bg-red-500 hover:bg-red-600'}`}
+                >
+                  {checkoutAlert.isSuccess ? "View My Inventory" : "Close"}
                 </button>
 
               </motion.div>

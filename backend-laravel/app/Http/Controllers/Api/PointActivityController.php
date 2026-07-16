@@ -47,6 +47,8 @@ class PointActivityController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     * Sekarang wallet_address WAJIB dikirim, dan setiap aktivitas
+     * langsung mengubah kolom users.points (sumber kebenaran saldo poin).
      */
     public function store(Request $request)
     {
@@ -55,49 +57,68 @@ class PointActivityController extends Controller
                 'activity_type'  => 'required|string',
                 'description'    => 'required|string',
                 'points'         => 'required|integer',
-                'wallet_address' => 'nullable|string',
+                'wallet_address' => 'required|string',
                 'user_id'        => 'nullable|exists:users,id',
                 'chain'          => 'nullable|string',
             ]);
 
-            $userId = $validated['user_id'] ?? null;
-
-            // Kalau user_id tidak dikirim tapi ada wallet_address,
-            // cari user berdasarkan wallet, atau buat user baru otomatis.
-            if (!$userId && !empty($validated['wallet_address'])) {
+            $result = DB::transaction(function () use ($validated) {
                 $walletAddress = $validated['wallet_address'];
+                $userId = $validated['user_id'] ?? null;
 
-                $user = User::firstOrCreate(
-                    ['wallet_address' => $walletAddress],
-                    [
-                        'name'     => 'User ' . substr($walletAddress, 0, 6),
-                        // Email harus unik & tidak null di tabel users bawaan Laravel,
-                        // jadi kita generate placeholder unik dari wallet address.
-                        'email'    => strtolower($walletAddress) . '@wallet.local',
-                        'password' => Hash::make(Str::random(32)),
-                    ]
-                );
+                // Cari user berdasarkan user_id kalau ada, kalau tidak cari/buat berdasarkan wallet_address
+                if ($userId) {
+                    $user = User::find($userId);
+                } else {
+                    $user = User::firstOrCreate(
+                        ['wallet_address' => $walletAddress],
+                        [
+                            'name'     => 'User ' . substr($walletAddress, 0, 6),
+                            // Email harus unik & tidak null di tabel users bawaan Laravel,
+                            // jadi kita generate placeholder unik dari wallet address.
+                            'email'    => strtolower($walletAddress) . '@wallet.local',
+                            'password' => Hash::make(Str::random(32)),
+                            'points'   => 0,
+                        ]
+                    );
+                }
 
-                $userId = $user->id;
-            }
+                // Kalau user ditemukan lewat user_id tapi belum punya wallet_address tersimpan, sinkronkan
+                if ($user && !$user->wallet_address) {
+                    $user->wallet_address = $walletAddress;
+                    $user->save();
+                }
 
-            $activity = PointActivity::create([
-                'user_id'        => $userId,
-                'wallet_address' => $validated['wallet_address'] ?? null,
-                'activity_type'  => $validated['activity_type'],
-                'description'    => $validated['description'],
-                'points'         => $validated['points'],
-                'chain'          => $validated['chain'] ?? null,
-            ]);
+                $activity = PointActivity::create([
+                    'user_id'        => $user?->id,
+                    'wallet_address' => $walletAddress,
+                    'activity_type'  => $validated['activity_type'],
+                    'description'    => $validated['description'],
+                    'points'         => $validated['points'],
+                    'chain'          => $validated['chain'] ?? null,
+                ]);
+
+                // Update saldo poin user. increment() bisa terima nilai negatif untuk redeem/pengurangan.
+                if ($user) {
+                    $user->increment('points', $validated['points']);
+                    $user->refresh();
+                }
+
+                return [
+                    'activity'     => $activity,
+                    'total_points' => $user?->points ?? 0,
+                ];
+            });
 
             return response()->json([
-                'success' => true,
-                'message' => 'Aktivitas poin berhasil dicatat!',
-                'data'    => $activity,
+                'success'      => true,
+                'message'      => 'Aktivitas poin berhasil dicatat!',
+                'data'         => $result['activity'],
+                'total_points' => $result['total_points'],
             ], 201);
 
         } catch (ValidationException $e) {
-            // Data yang dikirim frontend tidak valid (400, bukan 500)
+            // Data yang dikirim frontend tidak valid (422, bukan 500)
             return response()->json([
                 'success' => false,
                 'message' => 'Data tidak valid.',
@@ -118,5 +139,21 @@ class PointActivityController extends Controller
                 'debug'   => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Mengambil total poin (saldo resmi) milik satu wallet address.
+     * Ini yang dipakai frontend sebagai sumber kebenaran saldo poin,
+     * bukan hasil hitung manual dari daftar riwayat aktivitas.
+     */
+    public function pointsByWallet(string $wallet)
+    {
+        $user = User::where('wallet_address', $wallet)->first();
+
+        return response()->json([
+            'success'        => true,
+            'wallet_address' => $wallet,
+            'points'         => $user->points ?? 0,
+        ], 200);
     }
 }

@@ -29,6 +29,8 @@ dist-ssr
 # Node
 node_modules/
 
+.history/
+
 # Build
 dist/
 build/

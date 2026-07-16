@@ -28,7 +28,10 @@ const features = [
 
 export default function Feature() {
   return (
-    <section className="bg-white py-16 sm:py-20 lg:py-24 px-4 sm:px-6" id="feature">
+<section
+  className="bg-white pt-2 pb-20 px-4 sm:px-6"
+  id="feature"
+>
       <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
         {features.map((item, index) => (
           <FeatureCard key={index} {...item} />

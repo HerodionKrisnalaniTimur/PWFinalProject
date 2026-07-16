@@ -29,7 +29,8 @@ export const fetchPointActivities = async (filters: { wallet_address?: string; u
 };
 
 /**
- * Mencatat aktivitas poin baru ke database
+ * Mencatat aktivitas poin baru ke database.
+ * Response-nya membawa 'total_points' hasil hitungan resmi dari backend.
  */
 export const storePointActivity = async (data: PointActivityData) => {
   try {
@@ -37,6 +38,20 @@ export const storePointActivity = async (data: PointActivityData) => {
     return response.data;
   } catch (error) {
     console.error("Gagal mencatat aktivitas poin ke database:", error);
+    throw error;
+  }
+};
+
+/**
+ * Mengambil total poin sebuah wallet LANGSUNG dari kolom users.points di database.
+ * Ini sumber kebenaran untuk saldo poin, bukan hasil hitung manual dari daftar aktivitas.
+ */
+export const fetchWalletPoints = async (walletAddress: string) => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/wallet-points/${walletAddress}`);
+    return response.data; // { success, wallet_address, points }
+  } catch (error) {
+    console.error("Gagal mengambil total poin wallet dari database:", error);
     throw error;
   }
 };

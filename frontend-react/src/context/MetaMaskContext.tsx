@@ -12,6 +12,7 @@ interface MetaMaskContextType {
   isConnected: boolean;
   error: string | null;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   isSwitching: boolean;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
@@ -39,34 +40,32 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
-
-  const fetchAdminWallet = async (): Promise<string | null> => {
-    try {
-      const response = await axios.get(`${API_URL}/admin/config/wallet`);
-      if (response.data.success) {
-        return response.data.admin_wallet;
-      }
-      return null;
-    } catch (err) {
-      console.error('Gagal mengambil admin wallet:', err);
-      return null;
-    }
-  };
 
   const checkAdminStatus = async (address: string): Promise<boolean> => {
     if (!address) return false;
-    
+
     try {
-      const admin = await fetchAdminWallet();
-      if (!admin) return false;
-      
-      const isAdminWallet = address.toLowerCase() === admin.toLowerCase();
+      const response = await axios.get(
+        `${API_URL}/admin/config/check-admin/${address.toLowerCase()}`
+      );
+
+      const isAdminWallet = !!response.data?.is_admin;
+      const isSuperAdminWallet = !!response.data?.is_super_admin;
       setIsAdmin(isAdminWallet);
-      console.log('🔍 Admin check:', { address, admin, isAdminWallet });
+      setIsSuperAdmin(isSuperAdminWallet);
+      console.log('🔍 Admin check:', {
+        address,
+        isAdminWallet,
+        isSuperAdminWallet,
+        source: response.data?.source,
+      });
       return isAdminWallet;
     } catch (err) {
       console.error('Error checking admin status:', err);
+      setIsAdmin(false);
+      setIsSuperAdmin(false);
       return false;
     }
   };
@@ -101,6 +100,7 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
     setAccount(null);
     setIsConnected(false);
     setIsAdmin(false);
+    setIsSuperAdmin(false);
   };
 
   const switchWallet = async () => {
@@ -138,10 +138,7 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
       setIsSwitching(false);
     }
   };
-
-  // ============================================
-  // ✅ CEK APAKAH METAMASK SUDAH TERHUBUNG SAAT PERTAMA KALI
-  // ============================================
+  
   useEffect(() => {
     const checkIfAlreadyConnected = async () => {
       if (window.ethereum) {
@@ -184,6 +181,7 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
           setAccount(null);
           setIsConnected(false);
           setIsAdmin(false);
+          setIsSuperAdmin(false);
         }
       };
 
@@ -201,6 +199,7 @@ export const MetaMaskProvider: React.FC<MetaMaskProviderProps> = ({ children }) 
       isConnected,
       error,
       isAdmin,
+      isSuperAdmin,
       isSwitching,
       connectWallet,
       disconnectWallet,

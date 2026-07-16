@@ -28,13 +28,6 @@ const AdminDashboard = () => {
       description: 'Manajemen pengguna dan wallet',
       path: '/admin/users',
       color: 'bg-purple-500'
-    },
-    {
-      icon: '⚙️',
-      title: 'Pengaturan',
-      description: 'Konfigurasi sistem',
-      path: '/admin/settings',
-      color: 'bg-gray-500'
     }
   ];
 
@@ -55,7 +48,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Grid Menu */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {menuItems.map((item, index) => (
             <Link
               key={index}
