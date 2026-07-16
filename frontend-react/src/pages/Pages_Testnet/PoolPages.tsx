@@ -36,7 +36,7 @@ interface PoolPosition {
 
 interface PoolStats {
   tvl: number;
-  apr: number;
+  apr: number; // Property ini menampung data 'Estimated Daily Earnings' dari service
   activePositions: number;
 }
 
@@ -87,31 +87,27 @@ const PoolPage = () => {
   };
 
   const loadLiquidityData = async (address: string) => {
-    try {
-      const historyData = getLiquidityHistory(address);
-      setHistory(historyData);
+  try {
+    const historyData = getLiquidityHistory(address);
+    setHistory(historyData);
 
-      const statsData = await calculateTotalStats(address);
-      const positionsData = await getUserPositionsFromHistory(address);
+    // Kirim alamat wallet secara dinamis ke service
+    const statsData = await calculateTotalStats(address); 
+    const positionsData = await getUserPositionsFromHistory(address);
 
-      const positionsArray = Object.keys(positionsData).map((key) => ({
-        token: positionsData[key].token,
-        amount: positionsData[key].amount,
-      }));
+    const positionsArray = Object.keys(positionsData).map((key) => ({
+      token: positionsData[key].token,
+      amount: positionsData[key].amount,
+    }));
 
-      setUserPositions(positionsArray);
-
-      setGlobalStats({
-        ...statsData,
-        activePositions: positionsArray.length // Sinkronkan juga jumlah angkanya
-      });
-
-    } catch (error) {
-      console.error("Error loading liquidity data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setUserPositions(positionsArray);
+    setGlobalStats(statsData);
+  } catch (error) {
+    console.error("Error loading liquidity data:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const setupAutoRefresh = (
     address: string
@@ -421,34 +417,41 @@ const PoolPage = () => {
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
 
+              {/*  KARTU 1: ESTIMATED DAILY EARNINGS */}
               <div className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
-                <TrendingUp className="text-green-500 mb-4" />
+                <Coins className="text-emerald-500 mb-4" />
                 <h3 className="text-gray-500 text-sm mb-2">
-                  Total APR 
+                  Estimated Daily Earnings
                 </h3>
-                <div className="text-3xl font-bold min-h-[36px] flex items-center">
+                <div className="text-3xl font-bold min-h-[36px] flex items-center text-gray-800">
                   {walletAddress && loading ? (
                     <div className="h-8 w-20 bg-gray-200/80 rounded-lg animate-pulse" />
                   ) : (
-                    `${globalStats.apr.toFixed(1)}%`
+                    // Diformat dalam USD dengan presisi desimal detail ($0.0000)
+                    `$${globalStats.apr.toFixed(4)}`
                   )}
                 </div>
               </div>
 
+              {/*  KARTU 2: TOTAL LIQUIDITY (GLOBAL TVL) */}
               <div className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
-                <Coins className="text-yellow-500 mb-4" />
+                <TrendingUp className="text-yellow-500 mb-4" />
                 <h3 className="text-gray-500 text-sm mb-2">
                   Total Liquidity
                 </h3>
-                <div className="text-3xl font-bold min-h-[36px] flex items-center">
+                <div className="text-3xl font-bold min-h-[36px] flex items-center text-gray-900">
                   {walletAddress && loading ? (
                     <div className="h-8 w-28 bg-gray-200/80 rounded-lg animate-pulse" />
                   ) : (
-                    `$${globalStats.tvl.toLocaleString()}`
+                    `$${globalStats.tvl.toLocaleString(undefined, {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
+                    })}`
                   )}
                 </div>
               </div>
 
+              {/* KARTU 3: YOUR ACTIVE POOLS */}
               <div className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
                 <Droplets className="text-cyan-500 mb-4" />
                 <h3 className="text-gray-500 text-sm mb-2">

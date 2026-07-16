@@ -249,7 +249,7 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
         {/* INPUT TO */}
         <div className="bg-gray-50/60 border border-gray-100 p-4 rounded-2xl pt-6">
           <div className="flex justify-between text-xs text-gray-400 font-bold mb-2">
-            <span>To (Estimated)</span>
+            <span>To</span>
             <span>Balance: {balances[toToken] || "0.00"}</span>
           </div>
           <div className="flex items-center justify-between gap-3 relative">

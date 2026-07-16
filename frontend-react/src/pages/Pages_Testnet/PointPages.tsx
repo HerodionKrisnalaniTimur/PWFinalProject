@@ -390,7 +390,7 @@ const handleAddToCart = () => {
           <header className="flex flex-col sm:flex-row justify-between sm:justify-end gap-3 mb-8">
             <motion.button whileHover={{ scale: 1.05 }} className="bg-white/70 backdrop-blur-xl px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md">
               <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] text-white font-bold">Z</div>
-              Zentrix Loyalty
+              Zentrix Points
             </motion.button>
 
             <motion.button

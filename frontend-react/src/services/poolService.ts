@@ -50,19 +50,19 @@ export const getProviderOrSigner = async (needSigner = false) => {
   return provider; 
 };
 
-// LOGIKA STATISTIK & POSISI (SISTEM HYBRID / DATA AMAN)
 
+// LOGIKA STATISTIK & POSISI (SISTEM HYBRID / DATA AMAN)
+// LOGIKA STATISTIK & POSISI (SISTEM HYBRID / DATA AMAN)
 export const calculateTotalStats = async (walletAddress: string) => {
   try {
     // 1. INVENTARISASI ATURAN INSENTIF (YIELD FARMING REWARDS)
     const DAILY_REWARD_PER_POOL_USD = 15; // Alokasi imbalan $15 USD per hari untuk tiap pool
-    const YEARLY_REWARD_PER_POOL_USD = DAILY_REWARD_PER_POOL_USD * 365; // $5,475 USD per tahun
 
     // Semua token yang didukung di smart contract pool
     const allTokens = ["USDT", "ZTX", "AGT", "TOG", "DGH", "MJK"];
     
-    let totalGlobalTvlUsdt = 0;
-    let poolAprList: number[] = [];
+    let totalUserTvlUsdt = 0;
+    let totalUserDailyEarningsUsdt = 0; // Menampung hasil pendapatan harian akumulatif user
 
     // Coba hubungkan ke RPC Node Blockchain
     let provider;
@@ -71,20 +71,21 @@ export const calculateTotalStats = async (walletAddress: string) => {
       provider = await getProviderOrSigner();
       poolContract = new ethers.Contract(CONTRACT_ADDRESSES.POOL_CONTRACT, MULTI_POOL_ABI, provider);
     } catch (error) {
-      console.warn("⚠️ Mode Offline: Gagal terhubung ke provider RPC. Menggunakan fallback simulasi.");
+      console.warn("Mode Offline: Gagal terhubung ke provider RPC. Menggunakan fallback simulasi.");
     }
 
-    // 2. HITUNG TVL GLOBAL & APR DINAMIS PER TOKEN
+    // Ambil data posisi lokal user terlebih dahulu sebagai fallback utama (Instant update)
+    const localPositions = walletAddress ? await getUserPositionsFromHistory(walletAddress) : {};
+
+    // 2. HITUNG TVL USER & PENDAPATAN HARIAN DINAMIS PER TOKEN
     for (const symbol of allTokens) {
       const tokenAddress = CONTRACT_ADDRESSES[`TOKEN_${symbol}` as keyof typeof CONTRACT_ADDRESSES];
       
-      let rawLiquidity = BigInt(0);
       let rate = symbol === "USDT" ? 1 : 100; // Fallback rate (1 USDT = 100 koin game)
 
-      // Ambil data riil langsung dari blockchain jika contract tersedia
+      // Ambil rate dari contract jika ada
       if (poolContract && tokenAddress) {
         try {
-          rawLiquidity = await poolContract.getPoolLiquidity(tokenAddress);
           if (symbol !== "USDT") {
             const rawRate = await poolContract.tokenRates(tokenAddress);
             if (rawRate && Number(rawRate) > 0) {
@@ -96,23 +97,60 @@ export const calculateTotalStats = async (walletAddress: string) => {
         }
       }
 
-      const liquidityAmount = parseFloat(ethers.formatUnits(rawLiquidity, 18));
-      
-      // Rumus konversi saldo koin on-chain ke representasi USD/USDT
-      const onChainPoolTvlUsdt = rate > 0 ? (liquidityAmount / rate) : 0;
-      
-      totalGlobalTvlUsdt += onChainPoolTvlUsdt;
+      // Ambil likuiditas milik user dari local storage
+      let userLiquidityAmount = 0;
+      if (walletAddress && localPositions[symbol]) {
+        userLiquidityAmount = localPositions[symbol].amount;
+      }
 
-      // Kalkulasi matematika APR (Hanya untuk pool insentif non-USDT)
+      // Ambil data riil langsung dari blockchain jika contract dan wallet tersedia
+      if (poolContract && tokenAddress && walletAddress) {
+        try {
+          const rawUserLiquidity = await poolContract.getUserLiquidity(walletAddress, tokenAddress);
+          const blockchainAmount = parseFloat(ethers.formatUnits(rawUserLiquidity, 18));
+          
+          // 🛡️ TRICK HYBRID: Ambil nilai terbesar untuk menghindari jeda blok rpc yang belum ter-mining
+          userLiquidityAmount = Math.max(userLiquidityAmount, blockchainAmount);
+        } catch (error) {
+          // Gunakan fallback data lokal yang sudah tersimpan di userLiquidityAmount jika gagal read RPC
+        }
+      }
+
+      // Rumus konversi saldo koin user ke representasi USD/USDT
+      const userTvlUsdt = rate > 0 ? (userLiquidityAmount / rate) : 0;
+      totalUserTvlUsdt += userTvlUsdt;
+
+      // Hitung TVL global pool untuk pembagi rasio share
+      let globalLiquidityAmount = 0;
+      if (poolContract && tokenAddress) {
+        try {
+          const rawGlobalLiquidity = await poolContract.getPoolLiquidity(tokenAddress);
+          globalLiquidityAmount = parseFloat(ethers.formatUnits(rawGlobalLiquidity, 18));
+        } catch (error) {
+          // Ambil fallback default global TVL untuk perhitungan APR jika offline
+          globalLiquidityAmount = symbol === "USDT" ? 20000 : 2000000;
+        }
+      }
+      const globalPoolTvlUsdt = rate > 0 ? (globalLiquidityAmount / rate) : 0;
+
+      // 🟩 SINKRONISASI PENDAPATAN: Hitung bagi hasil imbalan harian secara proporsional
+      // Hanya berlaku untuk pool insentif (non-USDT dan non-MJK)
       if (symbol !== "USDT" && symbol !== "MJK") {
-        const poolApr = onChainPoolTvlUsdt > 0 
-          ? (YEARLY_REWARD_PER_POOL_USD / onChainPoolTvlUsdt) * 100 
-          : 0;
-        poolAprList.push(poolApr);
+        if (userTvlUsdt > 0) {
+          // 🛡️ Amankan dari pembagian dengan nol atau delay rpc global TVL
+          const effectiveGlobalTvlUsdt = globalPoolTvlUsdt > 0 ? Math.max(globalPoolTvlUsdt, userTvlUsdt) : userTvlUsdt;
+          
+          // Rasio kepemilikan user di dalam pool global (maksimal 1 atau 100%)
+          const userShareFraction = userTvlUsdt / effectiveGlobalTvlUsdt;
+          
+          // Akumulasikan pendapatan harian dari pool ini
+          const userDailyEarningFromPool = userShareFraction * DAILY_REWARD_PER_POOL_USD;
+          totalUserDailyEarningsUsdt += userDailyEarningFromPool;
+        }
       }
     }
 
-    // 3. AMBIL DATA POSISI AKTIF DOMPET LOKAL USER (Agar kartu posisi milik user tetap tampil akurat)
+    // 3. AMBIL DATA POSISI AKTIF DOMPET LOKAL USER
     const activeUserTokens = new Set<string>();
     if (walletAddress) {
       const localHistory = getLiquidityHistory(walletAddress);
@@ -136,23 +174,18 @@ export const calculateTotalStats = async (walletAddress: string) => {
       });
     }
 
-    // Hitung rata-rata APR dari seluruh pool aktif
-    const averageApr = poolAprList.length > 0 
-      ? poolAprList.reduce((a, b) => a + b, 0) / poolAprList.length 
-      : 36.5;
-
     return { 
-      tvl: Math.round(totalGlobalTvlUsdt), 
-      apr: averageApr, 
+      tvl: totalUserTvlUsdt, 
+      apr: totalUserDailyEarningsUsdt, // Menyimpan hasil kalkulasi USD Harian ke properti 'apr' agar UI tidak patah
       activePositions: activeUserTokens.size 
     };
 
   } catch (error) {
     console.error("Gagal menghitung statistik pool:", error);
-    // Fallback data statis yang aman jika terjadi pemutusan koneksi internet secara tiba-tiba
-    return { tvl: 60000, apr: 36.5, activePositions: 0 };
+    return { tvl: 0, apr: 0, activePositions: 0 };
   }
 };
+
 
 export const getUserPositionsFromHistory = async (walletAddress: string): Promise<Record<string, { token: string; amount: number }>> => {
   try {
@@ -262,6 +295,12 @@ export const addLiquidityHistory = (walletAddress: string, token: string, amount
     };
     history.unshift(newItem);
     localStorage.setItem(`liquidity_history_${walletAddress.toLowerCase()}`, JSON.stringify(history));
+
+    //  INSTANT EVENT DISPATCHER: Memaksa PoolPage.tsx untuk segera mereload data detik ini juga!
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("liquidity_history_updated"));
+    }
+
     return newItem;
   } catch (error) {}
 };
