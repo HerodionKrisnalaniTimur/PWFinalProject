@@ -17,6 +17,8 @@ import {
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { usePoints } from '../../context/PointsContext';
+import { useMetaMask } from "../../context/MetaMaskContext";
+import { fetchRewards, storeReward, deleteReward } from "../../services/pointService";
 
 
 // IMPORT GAMBAR BARU DARI FOLDER ASSETS
@@ -37,21 +39,66 @@ declare global {
 
 // DATA REWARD BARU DI SINI (ID, STUDIO, NAMA ITEM, HARGA, GAMBAR, TAG PROMO)
 const rewardItems = [
-  { id: 1, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Baileys Collector's Pin", price: 1500, img: baileysPin, tag: "New" },
-  { id: 2, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Lua Collector's Pin", price: 2500, img: luaPin, tag: "New" },
-  { id: 3, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Aqua Collector's Pin", price: 2500, img: aquaPin, tag: "New" },
-  { id: 4, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Neil Collector's Pin", price: 2500, img: neilPin, tag: "New" },
-  { id: 5, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Hyde Collector's Pin", price: 2500, img: hydePin, tag: "New" },
-  { id: 6, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Hyde & Neil Standee", price: 5000, oldPrice: 6500, img: standee, tag: "Save 1.500 PTS" },
-  { id: 7, studio: "MOJIKEN STUDIO", itemName: "Mojiken Studio Exclusive E-Voucher", price: 1500, img: mojikenCard, tag: "Digital" },
-  { id: 8, studio: "Digital Happiness", itemName: "DreadOut Official Linda Bag", price: 12000, img: lindaBag, tag: "Merch" },
-  { id: 9, studio: "Gooseworx", itemName: "Glitch Productions Pomni UwU", price: 200000, img: pomni, tag: "Merch" },
+  { id: 1, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Baileys Collector's Pin", price: 1500, img: "coffee-talk_pin_baileys-collectors-front-TEMP_web.webp", tag: "New" },
+  { id: 2, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Lua Collector's Pin", price: 2500, img: "coffee-talk_pin_lua-collectors_web.webp", tag: "New" },
+  { id: 3, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Aqua Collector's Pin", price: 2500, img: "coffee-talk_pin_aqua-collectors_web.webp", tag: "New" },
+  { id: 4, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Neil Collector's Pin", price: 2500, img: "sanshee_coffee-talk_Neil-collector_s-pin.webp", tag: "New" },
+  { id: 5, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Hyde Collector's Pin", price: 2500, img: "sanshee_coffee-talk_Hyde-collector_s-pin.webp", tag: "New" },
+  { id: 6, studio: "TOGE PRODUCTIONS", itemName: "Coffee Talk Hyde & Neil Standee", price: 5000, oldPrice: 6500, img: "product-image_Coffee-Talk_Hyde-Neil-Standee_WBG.webp", tag: "Save 1.500 PTS" },
+  { id: 7, studio: "MOJIKEN STUDIO", itemName: "Mojiken Studio Exclusive E-Voucher", price: 1500, img: "Game Gift Card MojiKeN.png", tag: "Digital" },
+  { id: 8, studio: "Digital Happiness", itemName: "DreadOut Official Linda Bag", price: 12000, img: "Linda_DO_bag.webp", tag: "Merch" },
+  { id: 9, studio: "Gooseworx", itemName: "Glitch Productions Pomni UwU", price: 200000, img: "Pomni-Default.webp", tag: "Merch" },
 ];
 
+const PRESET_IMAGES: Record<string, string> = {
+  "coffee-talk_pin_baileys-collectors-front-TEMP_web.webp": baileysPin,
+  "coffee-talk_pin_lua-collectors_web.webp": luaPin,
+  "coffee-talk_pin_aqua-collectors_web.webp": aquaPin,
+  "sanshee_coffee-talk_Neil-collector_s-pin.webp": neilPin,
+  "sanshee_coffee-talk_Hyde-collector_s-pin.webp": hydePin,
+  "product-image_Coffee-Talk_Hyde-Neil-Standee_WBG.webp": standee,
+  "Game Gift Card MojiKeN.png": mojikenCard,
+  "Linda_DO_bag.webp": lindaBag,
+  "Pomni-Default.webp": pomni,
+  baileys: baileysPin,
+  lua: luaPin,
+  aqua: aquaPin,
+  neil: neilPin,
+  hyde: hydePin,
+  standee: standee,
+  mojiken: mojikenCard,
+  linda: lindaBag,
+  pomni: pomni,
+};
+
+const getRewardImage = (imgSrc: string) => {
+  if (!imgSrc) return pomni;
+  if (PRESET_IMAGES[imgSrc]) {
+    return PRESET_IMAGES[imgSrc];
+  }
+  if (PRESET_IMAGES[imgSrc.toLowerCase()]) {
+    return PRESET_IMAGES[imgSrc.toLowerCase()];
+  }
+  return imgSrc;
+};
+
 const PointsPage = () => {
+  const { account, isAdmin } = useMetaMask();
   const [loading, setLoading] = useState(true);
   const [walletAddress, setWalletAddress] = useState<string>("");
   const { userPoints, setUserPoints, recentActivity, addActivity, fetchUserActivities } = usePoints();
+  const [rewards, setRewards] = useState<any[]>([]);
+  const [isAddRewardOpen, setIsAddRewardOpen] = useState(false);
+  const [newReward, setNewReward] = useState({
+    studio: "TOGE PRODUCTIONS",
+    item_name: "",
+    price: 1000,
+    old_price: "",
+    img: "",
+    tag: ""
+  });
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+
   let currentTier = "Silver";
   let nextTier = "Gold";
   let pointsNeeded = 1000 - userPoints;
@@ -80,6 +127,85 @@ const PointsPage = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isCartBouncing, setIsCartBouncing] = useState(false);
   const [checkoutAlert, setCheckoutAlert] = useState<{isOpen: boolean, isSuccess: boolean, title: string, message: string, items?: any[]}>({ isOpen: false, isSuccess: false, title: "", message: "", items: [] }); 
+
+  const loadRewards = async () => {
+    try {
+      const res = await fetchRewards();
+      if (res && res.success && res.data.length > 0) {
+        // Map database response field names if different
+        const normalized = res.data.map((item: any) => ({
+          id: item.id,
+          studio: item.studio,
+          itemName: item.item_name,
+          price: item.price,
+          oldPrice: item.old_price,
+          img: item.img,
+          tag: item.tag
+        }));
+        setRewards(normalized);
+      } else {
+        setRewards(rewardItems);
+      }
+    } catch (e) {
+      setRewards(rewardItems);
+    }
+  };
+
+  useEffect(() => {
+    loadRewards();
+  }, []);
+
+  const handleDeleteReward = async (id: number) => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus reward ini?")) return;
+    try {
+      const activeWallet = account || walletAddress;
+      await deleteReward(id, activeWallet);
+      setToastMessage("Reward berhasil dihapus!");
+      setTimeout(() => setToastMessage(null), 3000);
+      loadRewards();
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Gagal menghapus reward");
+    }
+  };
+
+  const handleAddRewardSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newReward.item_name || !selectedImageFile) {
+      alert("Nama Item dan Gambar (Upload) wajib diisi!");
+      return;
+    }
+    try {
+      const activeWallet = account || walletAddress;
+      const formData = new FormData();
+      formData.append("studio", newReward.studio);
+      formData.append("item_name", newReward.item_name);
+      formData.append("price", String(newReward.price));
+      if (newReward.old_price) {
+        formData.append("old_price", String(newReward.old_price));
+      }
+      formData.append("img", selectedImageFile);
+      if (newReward.tag) {
+        formData.append("tag", newReward.tag);
+      }
+
+      await storeReward(formData, activeWallet);
+      setToastMessage("Reward baru berhasil ditambahkan!");
+      setTimeout(() => setToastMessage(null), 3000);
+      setIsAddRewardOpen(false);
+      setSelectedImageFile(null);
+      setNewReward({
+        studio: "TOGE PRODUCTIONS",
+        item_name: "",
+        price: 1000,
+        old_price: "",
+        img: "",
+        tag: ""
+      });
+      loadRewards();
+    } catch (e: any) {
+      alert(e.response?.data?.message || "Gagal menambahkan reward");
+    }
+  };
 
   // Simulasi memuat data aktivitas poin
   useEffect(() => {
@@ -336,7 +462,7 @@ const handleAddToCart = () => {
 
                 <div className="flex flex-col md:flex-row gap-6 bg-[#F8F9FA] rounded-2xl overflow-hidden border border-gray-100">
                   <div className="w-full md:w-1/2 p-4 sm:p-8 flex items-center justify-center bg-transparent rounded-2xl">
-                    <img src={selectedItem.img} alt={selectedItem.itemName} className="w-64 h-64 object-contain drop-shadow-md" />
+                    <img src={getRewardImage(selectedItem.img)} alt={selectedItem.itemName} className="w-64 h-64 object-contain drop-shadow-md" />
                   </div>
 
                   <div className="w-full md:w-1/2 p-6 md:p-10 flex flex-col justify-center">
@@ -372,19 +498,39 @@ const handleAddToCart = () => {
                 {/* Header Bawaan Zentrix (Sesuai Screenshot) */}
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-bold text-gray-800">Redeem Rewards</h3>
-                  <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-100 shadow-sm">
-                    Tersedia: {walletAddress ? userPoints.toLocaleString() : "0"} PTS
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {isAdmin && (
+                      <button 
+                        onClick={() => setIsAddRewardOpen(true)}
+                        className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-2 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer animate-in fade-in"
+                      >
+                        + Add Reward
+                      </button>
+                    )}
+                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-2 rounded-full border border-blue-100 shadow-sm">
+                      Tersedia: {walletAddress ? userPoints.toLocaleString() : "0"} PTS
+                    </span>
+                  </div>
                 </div>
                 {/* Grid Produk */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {rewardItems.map((item) => (
-                    <div key={item.id} className="bg-white rounded-[24px] p-4 flex flex-col shadow-sm border border-gray-100 hover:shadow-lg transition-shadow">        
+                  {rewards.map((item) => (
+                    <div key={item.id} className="bg-white rounded-[24px] p-4 flex flex-col shadow-sm border border-gray-100 hover:shadow-lg transition-shadow relative group">        
+                      {/* Tombol Delete (Hanya Admin) */}
+                      {isAdmin && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDeleteReward(item.id); }}
+                          className="absolute top-3 right-3 bg-red-50 hover:bg-red-100 text-red-500 p-2 rounded-full shadow-sm z-20 transition-all cursor-pointer border border-red-100"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                      
                       {/* Kotak Gambar */}
                       <div 
                         onClick={() => openItemDetail(item)}
                         className="relative w-full aspect-square rounded-[16px] overflow-hidden bg-transparent flex items-center justify-center cursor-pointer">
-                        <img src={item.img} alt={item.itemName} className="w-full h-full object-contain p-2 hover:scale-105 transition-transform duration-500" />
+                        <img src={getRewardImage(item.img)} alt={item.itemName} className="w-full h-full object-contain p-2 hover:scale-105 transition-transform duration-500" />
                         {/* Tag Promo */}
                         {item.tag && (
                           <div className="absolute bottom-3 left-3 bg-[#D43D9D] text-white text-[10px] font-bold px-3 py-1 rounded shadow-sm uppercase tracking-wider pointer-events-none">
@@ -514,7 +660,7 @@ const handleAddToCart = () => {
                        {cart.map((item: any) => (
                          <div key={item.id} className="flex gap-4 items-center border border-gray-100 p-3 rounded-2xl bg-gray-50/50 relative group">
                            <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center p-2 border border-gray-100 shadow-sm overflow-hidden">
-                             <img src={item.img} alt={item.itemName} className="w-full h-full object-contain" />
+                             <img src={getRewardImage(item.img)} alt={item.itemName} className="w-full h-full object-contain" />
                            </div>
                            <div className="flex-1">
                              <h4 className="text-sm font-bold text-gray-800 leading-tight mb-1 pr-6">{item.itemName}</h4>
@@ -583,7 +729,7 @@ const handleAddToCart = () => {
                 {/* Display Redeemed Items */}
                 {checkoutAlert.isSuccess && checkoutAlert.items && checkoutAlert.items.length > 0 && (
                   <div className="mb-8 flex flex-wrap justify-center gap-3">
-                    {checkoutAlert.items.map((item, idx) => (
+                    {checkoutAlert.items.map((item: any, idx: number) => (
                       <motion.div 
                         key={idx}
                         initial={{ opacity: 0, y: 20 }}
@@ -593,7 +739,7 @@ const handleAddToCart = () => {
                       >
                         <div className="w-16 h-16 relative flex items-center justify-center mb-2">
                           <div className="absolute inset-0 bg-[#27BDE2] blur-md opacity-20 rounded-full"></div>
-                          <img src={item.img} alt={item.itemName} className="w-full h-full object-contain relative z-10 drop-shadow-md" />
+                          <img src={getRewardImage(item.img)} alt={item.itemName} className="w-full h-full object-contain relative z-10 drop-shadow-md" />
                         </div>
                         <span className="text-[10px] font-bold text-gray-700 leading-tight line-clamp-2 min-h-[28px]">{item.itemName}</span>
                         <span className="text-[10px] text-gray-400 font-medium mt-1 bg-white px-2 py-0.5 rounded-full border border-gray-200">Qty: {item.quantity}</span>
@@ -609,6 +755,98 @@ const handleAddToCart = () => {
                   {checkoutAlert.isSuccess ? "View My Inventory" : "Close"}
                 </button>
 
+              </motion.div>
+            </div>
+          )}
+
+          {/* Add Reward Modal */}
+          {isAddRewardOpen && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[90] flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-[24px] w-full max-w-md overflow-hidden shadow-2xl border border-gray-100 p-6 flex flex-col">
+                <div className="flex justify-between items-center mb-6 pb-2 border-b border-gray-100">
+                  <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <Sparkles className="text-blue-500" /> Add New Reward
+                  </h3>
+                  <button onClick={() => { setIsAddRewardOpen(false); setSelectedImageFile(null); }} className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                    <X size={24} />
+                  </button>
+                </div>
+                
+                <form onSubmit={handleAddRewardSubmit} className="space-y-4 text-left">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Studio / Brand</label>
+                    <input 
+                      type="text" 
+                      value={newReward.studio} 
+                      onChange={(e) => setNewReward({ ...newReward, studio: e.target.value })} 
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                      placeholder="e.g. TOGE PRODUCTIONS"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Item Name</label>
+                    <input 
+                      type="text" 
+                      value={newReward.item_name} 
+                      onChange={(e) => setNewReward({ ...newReward, item_name: e.target.value })} 
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                      placeholder="e.g. Coffee Talk Pin"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Price (PTS)</label>
+                      <input 
+                        type="number" 
+                        value={newReward.price} 
+                        onChange={(e) => setNewReward({ ...newReward, price: Number(e.target.value) })} 
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                        placeholder="1500"
+                        min="1"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Old Price (PTS)</label>
+                      <input 
+                        type="number" 
+                        value={newReward.old_price} 
+                        onChange={(e) => setNewReward({ ...newReward, old_price: e.target.value })} 
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                        placeholder="Optional"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Upload Image</label>
+                    <input 
+                      type="file" 
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          setSelectedImageFile(e.target.files[0]);
+                        }
+                      }} 
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                      accept="image/*"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Tag / Promo</label>
+                    <input 
+                      type="text" 
+                      value={newReward.tag} 
+                      onChange={(e) => setNewReward({ ...newReward, tag: e.target.value })} 
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                      placeholder="e.g. New, Save 500 PTS, Merch"
+                    />
+                  </div>
+                  <button type="submit" className="w-full bg-[#27BDE2] hover:bg-[#1E9EBD] text-white font-bold py-4 rounded-xl text-sm transition-all shadow-md transform hover:-translate-y-0.5 mt-4 cursor-pointer">
+                    Create Reward Item
+                  </button>
+                </form>
               </motion.div>
             </div>
           )}

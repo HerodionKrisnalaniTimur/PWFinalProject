@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { fetchAllTokenBalances } from "../services/poolService";
 import { fetchLiveTokenRate, executeOnChainMultiSwap } from "../services/swapService";
 import { usePoints } from '../context/PointsContext'; 
+import SkeletonCard from "./SkeletonCard";
 
 interface SwapCardProps {
   walletAddress: string;
@@ -26,6 +27,7 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
   const [fromAmount, setFromAmount] = useState("");
   const [toAmount, setToAmount] = useState("");
   const [balances, setBalances] = useState<Record<string, string>>({});
+  const [loadingBalances, setLoadingBalances] = useState(!!walletAddress);
   const [loadingRate, setLoadingRate] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
   const [txStatus, setTxStatus] = useState<{ type: "processing" | "success" | "error"; message: string } | null>(null);
@@ -54,8 +56,21 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
 
   const loadBalances = useCallback(async () => {
     if (walletAddress) {
-      const data = await fetchAllTokenBalances(walletAddress);
-      setBalances(data);
+      setLoadingBalances(true);
+      try {
+        const data = await fetchAllTokenBalances(walletAddress);
+        setBalances(data);
+      } catch (error) {
+        console.error("Gagal memuat saldo:", error);
+      } finally {
+        setLoadingBalances(false);
+      }
+    }
+  }, [walletAddress]);
+
+  useEffect(() => {
+    if (walletAddress) {
+      setLoadingBalances(true);
     }
   }, [walletAddress]);
 
@@ -142,6 +157,12 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
       setIsSwapping(false);
     }
   };
+
+  const hasBalances = Object.keys(balances).length > 0;
+
+  if (walletAddress && loadingBalances && !hasBalances) {
+    return <SkeletonCard />;
+  }
 
   return (
     <div className="w-full max-w-md mx-auto bg-white/70 backdrop-blur-2xl rounded-[32px] p-6 border border-white shadow-2xl relative">

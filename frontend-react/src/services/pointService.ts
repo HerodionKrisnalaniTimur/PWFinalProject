@@ -55,3 +55,52 @@ export const fetchWalletPoints = async (walletAddress: string) => {
     throw error;
   }
 };
+
+export interface RewardData {
+  id?: number;
+  studio: string;
+  item_name: string;
+  price: number;
+  old_price?: number | null;
+  img: string;
+  tag?: string | null;
+}
+
+export const fetchRewards = async () => {
+  try {
+    const response = await axios.get(`${API_BASE_URL}/rewards`);
+    return response.data;
+  } catch (error) {
+    console.error("Gagal mengambil data rewards:", error);
+    throw error;
+  }
+};
+
+export const storeReward = async (data: FormData | RewardData, adminWallet: string) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/admin/rewards`, data, {
+      headers: {
+        'X-Wallet-Address': adminWallet,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Gagal membuat reward:", error);
+    throw error;
+  }
+};
+
+export const deleteReward = async (id: number, adminWallet: string) => {
+  try {
+    const response = await axios.delete(`${API_BASE_URL}/admin/rewards/${id}`, {
+      headers: {
+        'X-Wallet-Address': adminWallet
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Gagal menghapus reward:", error);
+    throw error;
+  }
+};

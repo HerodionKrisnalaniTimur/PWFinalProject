@@ -33,6 +33,7 @@ export default function FaucetPage() {
   const [walletAddress, setWalletAddress] = useState<string>("");
   const [loadingToken, setLoadingToken] = useState<string | null>(null);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+  const [loadingCooldowns, setLoadingCooldowns] = useState<boolean>(true);
   const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // ─── KONEKSI WALLET ──────────────────────────────────────────────
@@ -87,13 +88,29 @@ export default function FaucetPage() {
   // ─── COOLDOWN ────────────────────────────────────────────────────
 
   useEffect(() => {
+    let isInitial = true;
     const fetchCooldowns = async () => {
-      if (!walletAddress) return;
-      const updated: Record<string, number> = {};
-      for (const t of AVAILABLE_FAUCETS) {
-        updated[t.symbol] = await checkTokenCooldown(walletAddress, t.address);
+      if (!walletAddress) {
+        setLoadingCooldowns(false);
+        return;
       }
-      setCooldowns(updated);
+      if (isInitial) {
+        setLoadingCooldowns(true);
+      }
+      try {
+        const updated: Record<string, number> = {};
+        for (const t of AVAILABLE_FAUCETS) {
+          updated[t.symbol] = await checkTokenCooldown(walletAddress, t.address);
+        }
+        setCooldowns(updated);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (isInitial) {
+          setLoadingCooldowns(false);
+          isInitial = false;
+        }
+      }
     };
 
     fetchCooldowns();
@@ -227,15 +244,33 @@ export default function FaucetPage() {
 
             {/* Grid Token Cards – gaya kartu putih seperti Pool/Points */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {AVAILABLE_FAUCETS.map((token) => {
-                const isCooldown = cooldowns[token.symbol] > 0;
-                const isLoading = loadingToken === token.symbol;
-
-                return (
+              {walletAddress && loadingCooldowns ? (
+                AVAILABLE_FAUCETS.map((token) => (
                   <div
                     key={token.symbol}
-                    className="bg-white/80 rounded-2xl p-6 border border-gray-100 shadow-md hover:shadow-lg transition-shadow flex flex-col justify-between"
+                    className="bg-white/80 rounded-2xl p-6 border border-gray-100 shadow-md animate-pulse flex flex-col justify-between h-[230px]"
                   >
+                    <div>
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="w-12 h-12 rounded-full bg-gray-200/80" />
+                        <div className="h-6 w-20 bg-gray-200/80 rounded-full" />
+                      </div>
+                      <div className="h-6 w-28 bg-gray-200/80 rounded mb-2" />
+                      <div className="h-4 w-full bg-gray-200/80 rounded" />
+                    </div>
+                    <div className="h-12 w-full bg-gray-200/80 rounded-xl" />
+                  </div>
+                ))
+              ) : (
+                AVAILABLE_FAUCETS.map((token) => {
+                  const isCooldown = cooldowns[token.symbol] > 0;
+                  const isLoading = loadingToken === token.symbol;
+
+                  return (
+                    <div
+                      key={token.symbol}
+                      className="bg-white/80 rounded-2xl p-6 border border-gray-100 shadow-md hover:shadow-lg transition-shadow flex flex-col justify-between h-[230px]"
+                    >
                     <div>
                       <div className="flex justify-between items-center mb-4">
                         <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center font-bold text-lg text-blue-600 border border-blue-100">
@@ -274,7 +309,7 @@ export default function FaucetPage() {
                     </button>
                   </div>
                 );
-              })}
+              }))}
             </div>
           </motion.div>
         </main>

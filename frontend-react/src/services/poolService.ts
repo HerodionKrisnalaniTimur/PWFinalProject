@@ -57,10 +57,9 @@ export const calculateTotalStats = async (walletAddress: string) => {
     // 1. INVENTARISASI ATURAN INSENTIF (YIELD FARMING REWARDS)
     const DAILY_REWARD_PER_POOL_USD = 15; // Alokasi imbalan $15 USD per hari untuk tiap pool
     const YEARLY_REWARD_PER_POOL_USD = DAILY_REWARD_PER_POOL_USD * 365; // $5,475 USD per tahun
-    const BASELINE_TVL_USD = 15000; // Modal dasar pool fiktif agar presentasi menarik sejak awal
 
-    // Daftar token aktif yang ditampilkan di PoolPage (tidak termasuk USDT & MJK)
-    const activeTokens = ["ZTX", "AGT", "TOG", "DGH"];
+    // Semua token yang didukung di smart contract pool
+    const allTokens = ["USDT", "ZTX", "AGT", "TOG", "DGH", "MJK"];
     
     let totalGlobalTvlUsdt = 0;
     let poolAprList: number[] = [];
@@ -76,19 +75,21 @@ export const calculateTotalStats = async (walletAddress: string) => {
     }
 
     // 2. HITUNG TVL GLOBAL & APR DINAMIS PER TOKEN
-    for (const symbol of activeTokens) {
+    for (const symbol of allTokens) {
       const tokenAddress = CONTRACT_ADDRESSES[`TOKEN_${symbol}` as keyof typeof CONTRACT_ADDRESSES];
       
       let rawLiquidity = BigInt(0);
-      let rate = 100; // Fallback rate (1 USDT = 100 koin game)
+      let rate = symbol === "USDT" ? 1 : 100; // Fallback rate (1 USDT = 100 koin game)
 
       // Ambil data riil langsung dari blockchain jika contract tersedia
       if (poolContract && tokenAddress) {
         try {
           rawLiquidity = await poolContract.getPoolLiquidity(tokenAddress);
-          const rawRate = await poolContract.tokenRates(tokenAddress);
-          if (rawRate && Number(rawRate) > 0) {
-            rate = Number(rawRate);
+          if (symbol !== "USDT") {
+            const rawRate = await poolContract.tokenRates(tokenAddress);
+            if (rawRate && Number(rawRate) > 0) {
+              rate = Number(rawRate);
+            }
           }
         } catch (error) {
           // Tetap amankan proses looping jika salah satu call ke contract error
@@ -97,16 +98,18 @@ export const calculateTotalStats = async (walletAddress: string) => {
 
       const liquidityAmount = parseFloat(ethers.formatUnits(rawLiquidity, 18));
       
-      // Rumus konversi saldo koin on-chain ke representasi USD
+      // Rumus konversi saldo koin on-chain ke representasi USD/USDT
       const onChainPoolTvlUsdt = rate > 0 ? (liquidityAmount / rate) : 0;
       
-      // Gabungkan TVL Riil On-chain dengan baseline modal dasar agar visualisasi seimbang
-      const totalPoolTvlUsdt = BASELINE_TVL_USD + onChainPoolTvlUsdt;
-      totalGlobalTvlUsdt += totalPoolTvlUsdt;
+      totalGlobalTvlUsdt += onChainPoolTvlUsdt;
 
-      // Kalkulasi matematika APR
-      const poolApr = (YEARLY_REWARD_PER_POOL_USD / totalPoolTvlUsdt) * 100;
-      poolAprList.push(poolApr);
+      // Kalkulasi matematika APR (Hanya untuk pool insentif non-USDT)
+      if (symbol !== "USDT" && symbol !== "MJK") {
+        const poolApr = onChainPoolTvlUsdt > 0 
+          ? (YEARLY_REWARD_PER_POOL_USD / onChainPoolTvlUsdt) * 100 
+          : 0;
+        poolAprList.push(poolApr);
+      }
     }
 
     // 3. AMBIL DATA POSISI AKTIF DOMPET LOKAL USER (Agar kartu posisi milik user tetap tampil akurat)

@@ -200,6 +200,7 @@ const PoolPage = () => {
         accounts: string[]
       ) => {
         if (accounts.length > 0) {
+          setLoading(true);
           setWalletAddress(accounts[0]);
           loadLiquidityData(accounts[0]);
           setupAutoRefresh(accounts[0]);
@@ -259,6 +260,7 @@ const PoolPage = () => {
                 "eth_requestAccounts",
             });
 
+          setLoading(true);
           setWalletAddress(accounts[0]);
 
           loadLiquidityData(accounts[0]);
@@ -354,17 +356,16 @@ const PoolPage = () => {
               whileHover={{
                 scale: 1.05,
               }}
-              className={`px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border shadow-md ${
-                walletAddress
+              className={`px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border shadow-md ${walletAddress
                   ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-700"
                   : "bg-white/70 border-white"
-              }`}
+                }`}
             >
               <Wallet size={16} />
               {walletAddress
                 ? formatAddress(
-                    walletAddress
-                  )
+                  walletAddress
+                )
                 : "Connect Wallet"}
             </motion.button>
           </header>
@@ -425,12 +426,13 @@ const PoolPage = () => {
                 <h3 className="text-gray-500 text-sm mb-2">
                   Total APR 
                 </h3>
-                <p className="text-3xl font-bold">
-                  {globalStats.apr.toFixed(
-                    1
+                <div className="text-3xl font-bold min-h-[36px] flex items-center">
+                  {walletAddress && loading ? (
+                    <div className="h-8 w-20 bg-gray-200/80 rounded-lg animate-pulse" />
+                  ) : (
+                    `${globalStats.apr.toFixed(1)}%`
                   )}
-                  %
-                </p>
+                </div>
               </div>
 
               <div className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
@@ -438,10 +440,13 @@ const PoolPage = () => {
                 <h3 className="text-gray-500 text-sm mb-2">
                   Total Liquidity
                 </h3>
-                <p className="text-3xl font-bold">
-                  $
-                  {globalStats.tvl.toLocaleString()}
-                </p>
+                <div className="text-3xl font-bold min-h-[36px] flex items-center">
+                  {walletAddress && loading ? (
+                    <div className="h-8 w-28 bg-gray-200/80 rounded-lg animate-pulse" />
+                  ) : (
+                    `$${globalStats.tvl.toLocaleString()}`
+                  )}
+                </div>
               </div>
 
               <div className="bg-white/80 rounded-3xl p-6 shadow-md border border-white">
@@ -449,9 +454,13 @@ const PoolPage = () => {
                 <h3 className="text-gray-500 text-sm mb-2">
                   Your Pools
                 </h3>
-                <p className="text-3xl font-bold">
-                  {activePoolsCount}
-                </p>
+                <div className="text-3xl font-bold min-h-[36px] flex items-center">
+                  {walletAddress && loading ? (
+                    <div className="h-8 w-14 bg-gray-200/80 rounded-lg animate-pulse" />
+                  ) : (
+                    activePoolsCount
+                  )}
+                </div>
               </div>
 
             </div>
