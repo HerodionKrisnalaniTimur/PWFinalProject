@@ -157,7 +157,274 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
         amount
       );
 
-      if (res && res.hash) {
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
+        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
+        const earnedPoints = Math.floor(parseFloat(amount) * 10);
+
+        addActivity(
+          "Liquidity Pool",
+          `Provided ${amount} ${selectedToken} liquidity`,
+          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          walletAddress,
+          "Sepolia Testnet"
+        );
+
+        setTxStatus({
+          type: "success",
+          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+            0,
+            10
+          )}...${res.hash.slice(-8)}`,
+        });
+    if (res && res.hash) {
         // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
         const earnedPoints = Math.floor(parseFloat(amount) * 10);
 

@@ -158,20 +158,17 @@ const AddLiquidityModal: React.FC<AddLiquidityModalProps> = ({
       );
 
       if (res && res.hash) {
-        // HITUNG POIN DINAMIS (Misal: 10x jumlah likuiditas)
-        const earnedPoints = Math.floor(parseFloat(amount) * 10);
-
         addActivity(
           "Liquidity Pool",
           `Provided ${amount} ${selectedToken} liquidity`,
-          earnedPoints, // <--- Sudah menggunakan variabel dinamis
+          150,
           walletAddress,
           "Sepolia Testnet"
         );
 
         setTxStatus({
           type: "success",
-          message: `Sukses! Anda mendapat +${earnedPoints} PTS.\nTx Hash: ${res.hash.slice(
+          message: `Sukses menambahkan likuiditas!\nTx Hash: ${res.hash.slice(
             0,
             10
           )}...${res.hash.slice(-8)}`,

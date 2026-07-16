@@ -32,7 +32,7 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
 
   const [isFromDropdownOpen, setIsFromDropdownOpen] = useState(false);
   const [isToDropdownOpen, setIsToDropdownOpen] = useState(false);
-  const [toast, setToast] = useState<{ show: boolean; message: string } | null>(null);
+const [toast, setToast] = useState<{ show: boolean; message: string } | null>(null);
   const fromDropdownRef = useRef<HTMLDivElement>(null);
   const toDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -122,14 +122,12 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
       await executeOnChainMultiSwap(fromToken, toToken, fromAmount);
       
       setTxStatus({ 
-      type: "success", 
-      message: `Berhasil Swap! Transaksi Anda telah dikonfirmasi` 
+        type: "success", 
+        message: `Berhasil Swap! Transaksi Anda telah dikonfirmasi` 
       });
 
-    // 1. TAMBAHKAN BARIS INI: Hitung poin dinamis (misal dikali 5)
-      const earnedPoints = Math.floor(parseFloat(fromAmount) * 5);
-
-      addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, earnedPoints, walletAddress, "Sepolia Testnet");      setFromAmount("");
+      addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, 50, walletAddress, "Sepolia Testnet");
+      setFromAmount("");
       setToAmount("");
       loadBalances();
     } catch (error: any) {

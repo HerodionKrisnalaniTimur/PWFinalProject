@@ -124,12 +124,46 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
       setTxStatus({ 
       type: "success", 
       message: `Berhasil Swap! Transaksi Anda telah dikonfirmasi` 
-      });
+    });
 
     // 1. TAMBAHKAN BARIS INI: Hitung poin dinamis (misal dikali 5)
-      const earnedPoints = Math.floor(parseFloat(fromAmount) * 5);
+    const earnedPoints = Math.floor(parseFloat(fromAmount) * 5);
 
-      addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, earnedPoints, walletAddress, "Sepolia Testnet");      setFromAmount("");
+    // 2. UBAH BARIS INI: Ganti angka 50 dengan 'earnedPoints'
+    addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, earnedPoints, walletAddress, "Sepolia Testnet");
+      setTxStatus({ 
+      type: "success", 
+      message: `Berhasil Swap! Transaksi Anda telah dikonfirmasi` 
+    });
+
+    // 1. TAMBAHKAN BARIS INI: Hitung poin dinamis (misal dikali 5)
+    const earnedPoints = Math.floor(parseFloat(fromAmount) * 5);
+
+    // 2. UBAH BARIS INI: Ganti angka 50 dengan 'earnedPoints'
+    addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, earnedPoints, walletAddress, "Sepolia Testnet");
+      setTxStatus({ 
+      type: "success", 
+      message: `Berhasil Swap! Transaksi Anda telah dikonfirmasi` 
+    });
+
+    // 1. TAMBAHKAN BARIS INI: Hitung poin dinamis (misal dikali 5)
+    const earnedPoints = Math.floor(parseFloat(fromAmount) * 5);
+
+    // 2. UBAH BARIS INI: Ganti angka 50 dengan 'earnedPoints'
+    addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, earnedPoints, walletAddress, "Sepolia Testnet");
+      setTxStatus({ 
+      type: "success", 
+      message: `Berhasil Swap! Transaksi Anda telah dikonfirmasi` 
+    });
+
+    // 1. TAMBAHKAN BARIS INI: Hitung poin dinamis (misal dikali 5)
+    const earnedPoints = Math.floor(parseFloat(fromAmount) * 5);
+
+    // 2. UBAH BARIS INI: Ganti angka 50 dengan 'earnedPoints'
+    addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, earnedPoints, walletAddress, "Sepolia Testnet");
+
+      addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, 50, walletAddress, "Sepolia Testnet");
+      setFromAmount("");
       setToAmount("");
       loadBalances();
     } catch (error: any) {

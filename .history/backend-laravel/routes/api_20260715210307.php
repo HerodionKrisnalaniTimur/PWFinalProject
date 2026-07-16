@@ -24,10 +24,8 @@ Route::get('/articles/{id}', [ArticleController::class, 'show']);
 
 // Public Point Activity routes
 Route::get('/point-activities', [PointActivityController::class, 'index']);
+Route::get('/point-activities/{id}', [PointActivityController::class, 'show']);
 Route::post('/point-activities', [PointActivityController::class, 'store']); // dipindah ke sini, tidak butuh login/token
-
-// Saldo poin resmi (dari kolom users.points) untuk satu wallet address
-Route::get('/wallet-points/{wallet}', [PointActivityController::class, 'pointsByWallet']);
 
 // Public Reward routes
 Route::get('/rewards', [RewardController::class, 'index']);

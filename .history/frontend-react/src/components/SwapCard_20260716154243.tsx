@@ -129,7 +129,7 @@ const SwapCard = ({ walletAddress, connectWallet }: SwapCardProps) => {
     // 1. TAMBAHKAN BARIS INI: Hitung poin dinamis (misal dikali 5)
       const earnedPoints = Math.floor(parseFloat(fromAmount) * 5);
 
-      addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, earnedPoints, walletAddress, "Sepolia Testnet");      setFromAmount("");
+addActivity("Swap", `Swapped ${fromAmount} ${fromToken} to ${toToken}`, earnedPoints, walletAddress, "Sepolia Testnet");      setFromAmount("");
       setToAmount("");
       loadBalances();
     } catch (error: any) {
