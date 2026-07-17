@@ -752,7 +752,7 @@ const handleAddToCart = () => {
                   onClick={() => setCheckoutAlert({ ...checkoutAlert, isOpen: false, items: [] })}
                   className={`w-full text-white font-bold py-4 rounded-xl transition-all shadow-md transform hover:-translate-y-0.5 ${checkoutAlert.isSuccess ? 'bg-[#27BDE2] hover:bg-[#1E9EBD]' : 'bg-red-500 hover:bg-red-600'}`}
                 >
-                  {checkoutAlert.isSuccess ? "View My Inventory" : "Close"}
+                  {checkoutAlert.isSuccess ? "Selesai" : "Close"}
                 </button>
 
               </motion.div>

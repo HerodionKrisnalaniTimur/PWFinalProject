@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useMetaMask } from '../context/MetaMaskContext';
 import Navbar from '../components/Navbar';
@@ -6,6 +6,24 @@ import Footer from './Footer';
 
 const AdminDashboard = () => {
   const { account } = useMetaMask();
+  // State untuk menyimpan total artikel
+  const [totalArticles, setTotalArticles] = useState<number | string>('-');
+
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/api/articles')
+      .then((response) => response.json())
+      .then((data) => {
+        if (data && Array.isArray(data.data)) {
+          setTotalArticles(data.data.length);
+        } else {
+          setTotalArticles(0);
+        }
+      })
+      .catch((error) => {
+        console.error("Gagal mengambil data artikel:", error);
+        setTotalArticles('-');
+      });
+  }, []);
 
   const menuItems = [
     {
@@ -75,15 +93,15 @@ const AdminDashboard = () => {
 
         {/* Info Tambahan */}
         <div className="mt-12 bg-white rounded-2xl shadow-sm border border-zinc-200 p-6">
-          <h3 className="text-lg font-bold text-zinc-900 mb-4">ℹ️ Informasi Admin</h3>
+          <h3 className="text-lg font-bold text-zinc-900 mb-4">ℹ️Informasi Admin</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div className="bg-zinc-50 rounded-xl p-4">
               <p className="text-zinc-500">Total Artikel</p>
-              <p className="text-2xl font-bold text-zinc-900">-</p>
+              <p className="text-2xl font-bold text-zinc-900">{totalArticles}</p>
             </div>
             <div className="bg-zinc-50 rounded-xl p-4">
               <p className="text-zinc-500">Status</p>
-              <p className="text-2xl font-bold text-green-600">🟢 Aktif</p>
+              <p className="text-2xl font-bold text-green-600">🟢Aktif</p>
             </div>
             <div className="bg-zinc-50 rounded-xl p-4">
               <p className="text-zinc-500">Role</p>
