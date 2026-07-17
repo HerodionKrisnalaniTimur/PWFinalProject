@@ -31,6 +31,7 @@ Route::get('/wallet-points/{wallet}', [PointActivityController::class, 'pointsBy
 
 // Public Reward routes
 Route::get('/rewards', [RewardController::class, 'index']);
+Route::post('/rewards/{id}/redeem', [RewardController::class, 'redeem']);
 
 // ============================================
 // ADMIN ROUTES (Dengan Verifikasi Wallet)

@@ -18,7 +18,7 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { usePoints } from '../../context/PointsContext';
 import { useMetaMask } from "../../context/MetaMaskContext";
-import { fetchRewards, storeReward, deleteReward } from "../../services/pointService";
+import { fetchRewards, storeReward, deleteReward, redeemReward } from "../../services/pointService";
 
 
 // IMPORT GAMBAR BARU DARI FOLDER ASSETS
@@ -32,7 +32,7 @@ import mojikenCard from "../../assets/Game Gift Card MojiKeN.png";
 import lindaBag from "../../assets/Linda_DO_bag.webp";
 import pomni from "../../assets/Pomni-Default.webp";
 declare global {
-  interface Window { 
+  interface Window {
     ethereum?: any;
   }
 }
@@ -119,14 +119,14 @@ const PointsPage = () => {
     nextTier = "Platinum";
     pointsNeeded = 5000 - userPoints;
     tierBadge = "Pro Trader";
-  } 
-  const [selectedItem, setSelectedItem] = useState<any>(null); 
-  const [quantity, setQuantity] = useState(1); 
+  }
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [quantity, setQuantity] = useState(1);
   const [cart, setCart] = useState<any[]>([]);
-  const [isCartModalOpen, setIsCartModalOpen] = useState(false); 
+  const [isCartModalOpen, setIsCartModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isCartBouncing, setIsCartBouncing] = useState(false);
-  const [checkoutAlert, setCheckoutAlert] = useState<{isOpen: boolean, isSuccess: boolean, title: string, message: string, items?: any[]}>({ isOpen: false, isSuccess: false, title: "", message: "", items: [] }); 
+  const [checkoutAlert, setCheckoutAlert] = useState<{ isOpen: boolean, isSuccess: boolean, title: string, message: string, items?: any[] }>({ isOpen: false, isSuccess: false, title: "", message: "", items: [] });
 
   const loadRewards = async () => {
     try {
@@ -140,7 +140,8 @@ const PointsPage = () => {
           price: item.price,
           oldPrice: item.old_price,
           img: item.img,
-          tag: item.tag
+          tag: item.tag,
+          is_redeemed: !!item.is_redeemed
         }));
         setRewards(normalized);
       } else {
@@ -172,6 +173,11 @@ const PointsPage = () => {
     e.preventDefault();
     if (!newReward.item_name || !selectedImageFile) {
       alert("Nama Item dan Gambar (Upload) wajib diisi!");
+      return;
+    }
+    const exists = rewards.some(item => item.itemName.toLowerCase() === newReward.item_name.trim().toLowerCase());
+    if (exists) {
+      alert("Nama reward/produk ini sudah ada di Display, silakan gunakan nama lain.");
       return;
     }
     try {
@@ -223,8 +229,8 @@ const PointsPage = () => {
     const checkConnection = async () => {
       if (typeof window !== "undefined" && window.ethereum) {
         try {
-          const accounts: string[] = await window.ethereum.request({ 
-            method: "eth_accounts" 
+          const accounts: string[] = await window.ethereum.request({
+            method: "eth_accounts"
           });
           if (accounts.length > 0) {
             setWalletAddress(accounts[0]);
@@ -282,7 +288,7 @@ const PointsPage = () => {
 
   const openItemDetail = (item: any) => {
     setSelectedItem(item);
-    setQuantity(1); 
+    setQuantity(1);
   };
 
   const closeItemDetail = () => {
@@ -290,15 +296,20 @@ const PointsPage = () => {
   };
 
   // FUNGSI KERANJANG BELANJA
-const handleAddToCart = () => {
+  const handleAddToCart = () => {
     const existingItem = cart.find((item: any) => item.id === selectedItem.id);
-    
+
     if (existingItem) {
-      setCart(cart.map((item: any) => item.id === selectedItem.id ? { ...item, quantity: item.quantity + quantity } : item));
-    } else {
-      setCart([...cart, { ...selectedItem, quantity }]);
+      setToastMessage(`Item is already in your cart.`);
+      setTimeout(() => {
+        setToastMessage(null);
+      }, 3000);
+      closeItemDetail();
+      return;
     }
-    setToastMessage(`Success! ${quantity}x ${selectedItem.itemName} added.`);
+
+    setCart([...cart, { ...selectedItem, quantity: 1 }]);
+    setToastMessage(`Success! ${selectedItem.itemName} added.`);
     setIsCartBouncing(true);
     setTimeout(() => {
       setToastMessage(null);
@@ -322,13 +333,13 @@ const handleAddToCart = () => {
   };
 
   const handleIncreaseQuantity = (id: number) => {
-    setCart(cart.map((item: any) => 
+    setCart(cart.map((item: any) =>
       item.id === id ? { ...item, quantity: item.quantity + 1 } : item
     ));
   };
 
   // === FIX: kirim walletAddress ke addActivity, dan pastikan wallet sudah terhubung ===
-  const handleCheckoutCart = () => {
+  const handleCheckoutCart = async () => {
     if (!walletAddress) {
       setIsCartModalOpen(false);
       setCheckoutAlert({
@@ -341,27 +352,44 @@ const handleAddToCart = () => {
     }
 
     const totalCost = cart.reduce((total: number, item: any) => total + (item.price * item.quantity), 0);
-    
+
     if (userPoints >= totalCost) {
-      cart.forEach((item: any) => {
-        addActivity(
-          "Redeem Reward", 
-          `Redeemed ${item.quantity}x ${item.itemName}`, 
-          -(item.price * item.quantity),
-          walletAddress
-        );
-      });
-      setCheckoutAlert({
-        isOpen: true,
-        isSuccess: true,
-        title: "Redemption Successful!",
-        message: `You spent ${totalCost.toLocaleString()} PTS. Your remaining balance is: ${(userPoints - totalCost).toLocaleString()} PTS.`,
-        items: cart
-      });
-      setCart([]); 
-      setIsCartModalOpen(false); 
+      try {
+        for (const item of cart) {
+          await redeemReward(item.id);
+        }
+
+        cart.forEach((item: any) => {
+          addActivity(
+            "Redeem Reward",
+            `Redeemed ${item.quantity}x ${item.itemName}`,
+            -(item.price * item.quantity),
+            walletAddress
+          );
+        });
+
+        setCheckoutAlert({
+          isOpen: true,
+          isSuccess: true,
+          title: "Redemption Successful!",
+          message: `You spent ${totalCost.toLocaleString()} PTS. Your remaining balance is: ${(userPoints - totalCost).toLocaleString()} PTS.`,
+          items: cart
+        });
+        setCart([]);
+        setIsCartModalOpen(false);
+        loadRewards();
+      } catch (error: any) {
+        console.error("Checkout failed:", error);
+        setIsCartModalOpen(false);
+        setCheckoutAlert({
+          isOpen: true,
+          isSuccess: false,
+          title: "Redemption Failed!",
+          message: error.response?.data?.message || "Terjadi kesalahan saat me-redeem reward."
+        });
+      }
     } else {
-      setIsCartModalOpen(false); 
+      setIsCartModalOpen(false);
       setCheckoutAlert({
         isOpen: true,
         isSuccess: false,
@@ -374,7 +402,7 @@ const handleAddToCart = () => {
   return (
     <PageTransition>
       <div className="min-h-screen bg-[#F8F9FA] flex text-[#1A1A1A] font-sans relative overflow-hidden">
-        
+
         {/* Latar Belakang */}
         <div className="absolute inset-0 z-0 overflow-hidden">
           <div className="absolute inset-0 opacity-40" style={{ backgroundImage: "radial-gradient(#D1D5DB 1px, transparent 1px)", backgroundSize: "30px 30px" }} />
@@ -385,7 +413,7 @@ const handleAddToCart = () => {
         <Sidebar />
 
         <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 z-10 relative overflow-y-scroll">
-          
+
           {/* Header Bar */}
           <header className="flex flex-col sm:flex-row justify-between sm:justify-end gap-3 mb-8">
             <motion.button whileHover={{ scale: 1.05 }} className="bg-white/70 backdrop-blur-xl px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border border-white shadow-md">
@@ -396,9 +424,8 @@ const handleAddToCart = () => {
             <motion.button
               onClick={handleWalletAction}
               whileHover={{ scale: 1.05 }}
-              className={`px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border shadow-md cursor-pointer transition-all ${
-                walletAddress ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-700 hover:from-emerald-100 hover:to-teal-100" : "bg-white/70 border-white text-[#1A1A1A] hover:bg-white"
-              }`}
+              className={`px-4 py-3 rounded-2xl flex items-center gap-2 font-bold text-sm border shadow-md cursor-pointer transition-all ${walletAddress ? "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200 text-emerald-700 hover:from-emerald-100 hover:to-teal-100" : "bg-white/70 border-white text-[#1A1A1A] hover:bg-white"
+                }`}
             >
               <Wallet size={16} className={walletAddress ? "text-emerald-600" : ""} />
               {walletAddress ? `${formatAddress(walletAddress)}` : "Connect Wallet"}
@@ -407,7 +434,7 @@ const handleAddToCart = () => {
 
           {/* Grid Konten Point */}
           <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-            
+
             {/* Card Kiri: Total Points */}
             <motion.div initial={{ opacity: 0, x: -30 }} animate={{ opacity: 1, x: 0 }} className="bg-white/70 backdrop-blur-2xl rounded-[32px] p-6 sm:p-8 border border-white shadow-xl flex flex-col justify-between">
               <div>
@@ -418,44 +445,44 @@ const handleAddToCart = () => {
                 <p className="text-gray-400 text-sm font-medium">Accumulated rewards balance</p>
                 <h1 className="text-5xl font-black text-gray-900 mt-2 tracking-tight">{walletAddress ? userPoints.toLocaleString() : "0"} <span className="text-xl font-bold text-gray-400">PTS</span></h1>
               </div>
-            <div className="mt-8 pt-4 border-t border-gray-100 text-xs text-gray-400 flex items-center gap-1.5"><Sparkles size={14} className="text-yellow-500" /> Points are updated every block confirmation.</div>
+              <div className="mt-8 pt-4 border-t border-gray-100 text-xs text-gray-400 flex items-center gap-1.5"><Sparkles size={14} className="text-yellow-500" /> Points are updated every block confirmation.</div>
             </motion.div>
-            
-          {/* Card Kanan: Loyalty Tier */}
-          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="bg-white/70 backdrop-blur-2xl rounded-[32px] p-6 sm:p-8 border border-white shadow-xl flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-800">
-                  <Trophy className="text-amber-500" />Loyalty Tier
-                </h2>
-                <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1 rounded-full border border-purple-100">
-                  {tierBadge}
-                </span>
+
+            {/* Card Kanan: Loyalty Tier */}
+            <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} className="bg-white/70 backdrop-blur-2xl rounded-[32px] p-6 sm:p-8 border border-white shadow-xl flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold flex items-center gap-2 text-gray-800">
+                    <Trophy className="text-amber-500" />Loyalty Tier
+                  </h2>
+                  <span className="text-xs font-semibold text-purple-600 bg-purple-50 px-3 py-1 rounded-full border border-purple-100">
+                    {tierBadge}
+                  </span>
+                </div>
+                <p className="text-gray-400 text-sm font-medium">Your current loyalty status</p>
+                <h1 className="text-5xl font-black text-gray-900 mt-2 tracking-tight">
+                  {walletAddress ? currentTier : "---"} <span className="text-xl font-bold text-gray-400">Trader</span>
+                </h1>
               </div>
-              <p className="text-gray-400 text-sm font-medium">Your current loyalty status</p>
-              <h1 className="text-5xl font-black text-gray-900 mt-2 tracking-tight">
-                {walletAddress ? currentTier : "---"} <span className="text-xl font-bold text-gray-400">Trader</span>
-              </h1>
-            </div>
-            <div className="mt-8 pt-4 border-t border-gray-100 text-xs text-green-600 font-semibold flex items-center gap-1.5">
-              <TrendingUp size={16} /> 
-              {currentTier === "Diamond" 
-                ? "You have reached the max level!" 
-                : `You need ${pointsNeeded.toLocaleString()} PTS to unlock ${nextTier}.`
-              }
-            </div>
-          </motion.div>
-          
-        </div> {/* Penutup Grid Kartu Atas */}
+              <div className="mt-8 pt-4 border-t border-gray-100 text-xs text-green-600 font-semibold flex items-center gap-1.5">
+                <TrendingUp size={16} />
+                {currentTier === "Diamond"
+                  ? "You have reached the max level!"
+                  : `You need ${pointsNeeded.toLocaleString()} PTS to unlock ${nextTier}.`
+                }
+              </div>
+            </motion.div>
+
+          </div> {/* Penutup Grid Kartu Atas */}
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-5xl mx-auto mt-6 mb-6 bg-white/70 backdrop-blur-2xl rounded-[32px] p-5 sm:p-8 border border-white shadow-xl">
-            
+
             {selectedItem ? (
               /* --- TAMPILAN 2: DETAIL PRODUK --- */
               <div className="animate-in fade-in duration-300">
                 <div className="text-xs text-gray-500 mb-6 flex items-center gap-2 font-medium">
-                  <span className="cursor-pointer hover:text-blue-600 transition-colors" onClick={closeItemDetail}>Home</span> 
+                  <span className="cursor-pointer hover:text-blue-600 transition-colors" onClick={closeItemDetail}>Home</span>
                   <span>&gt;</span>
-                  <span className="cursor-pointer hover:text-blue-600 transition-colors" onClick={closeItemDetail}>Redeem Rewards</span> 
+                  <span className="cursor-pointer hover:text-blue-600 transition-colors" onClick={closeItemDetail}>Redeem Rewards</span>
                   <span>&gt;</span>
                   <span className="text-gray-800 font-bold">{selectedItem.itemName}</span>
                 </div>
@@ -470,24 +497,21 @@ const handleAddToCart = () => {
                     <div className="flex justify-between items-center border-b border-gray-200 pb-4 mb-6">
                       <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md uppercase tracking-wide">{selectedItem.studio}</span>
                     </div>
-                    
+
                     <div className="flex items-center gap-6 mb-6">
                       <span className="text-sm font-medium text-gray-500 w-16">Price:</span>
                       <span className="text-3xl font-black text-gray-900">{selectedItem.price.toLocaleString()} <span className="text-lg text-gray-400 font-bold">PTS</span></span>
                     </div>
-                    
-                    <div className="flex items-center gap-6 mb-8">
-                      <span className="text-sm font-medium text-gray-500 w-16">Qty:</span>
-                      <div className="flex border-2 border-gray-200 rounded-xl bg-white overflow-hidden">
-                        <button className="w-12 py-2 text-gray-500 hover:bg-gray-100 font-bold transition-colors" onClick={() => setQuantity(Math.max(1, quantity - 1))}>-</button>
-                        <input type="text" value={quantity} readOnly className="w-14 text-center border-l-2 border-r-2 border-gray-200 text-sm font-bold focus:outline-none bg-white text-gray-800" />
-                        <button className="w-12 py-2 text-gray-500 hover:bg-gray-100 font-bold transition-colors" onClick={() => setQuantity(quantity + 1)}>+</button>
-                      </div>
-                    </div>
-                    
-                    <button onClick={handleAddToCart} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-sm transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
-                      Confirm Redeem
-                    </button>
+
+                    {selectedItem.is_redeemed ? (
+                      <button disabled className="w-full bg-gray-300 text-gray-500 font-bold py-4 rounded-xl text-sm cursor-not-allowed">
+                        SOLD OUT (Already Redeemed)
+                      </button>
+                    ) : (
+                      <button onClick={handleAddToCart} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-sm transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                        Confirm Redeem
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -500,7 +524,7 @@ const handleAddToCart = () => {
                   <h3 className="text-xl font-bold text-gray-800">Redeem Rewards</h3>
                   <div className="flex items-center gap-3">
                     {isAdmin && (
-                      <button 
+                      <button
                         onClick={() => setIsAddRewardOpen(true)}
                         className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-3.5 py-2 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer animate-in fade-in"
                       >
@@ -515,41 +539,47 @@ const handleAddToCart = () => {
                 {/* Grid Produk */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {rewards.map((item) => (
-                    <div key={item.id} className="bg-white rounded-[24px] p-4 flex flex-col shadow-sm border border-gray-100 hover:shadow-lg transition-shadow relative group">        
+                    <div key={item.id} className="bg-white rounded-[24px] p-4 flex flex-col shadow-sm border border-gray-100 hover:shadow-lg transition-shadow relative group">
                       {/* Tombol Delete (Hanya Admin) */}
                       {isAdmin && (
-                        <button 
+                        <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteReward(item.id); }}
                           className="absolute top-3 right-3 bg-red-50 hover:bg-red-100 text-red-500 p-2 rounded-full shadow-sm z-20 transition-all cursor-pointer border border-red-100"
                         >
                           <Trash2 size={13} />
                         </button>
                       )}
-                      
+
                       {/* Kotak Gambar */}
-                      <div 
+                      <div
                         onClick={() => openItemDetail(item)}
                         className="relative w-full aspect-square rounded-[16px] overflow-hidden bg-transparent flex items-center justify-center cursor-pointer">
                         <img src={getRewardImage(item.img)} alt={item.itemName} className="w-full h-full object-contain p-2 hover:scale-105 transition-transform duration-500" />
+                        {/* Sold Out Overlay */}
+                        {item.is_redeemed && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10 backdrop-blur-[2px]">
+                            <span className="bg-red-600 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-widest shadow-md">SOLD OUT</span>
+                          </div>
+                        )}
                         {/* Tag Promo */}
                         {item.tag && (
                           <div className="absolute bottom-3 left-3 bg-[#D43D9D] text-white text-[10px] font-bold px-3 py-1 rounded shadow-sm uppercase tracking-wider pointer-events-none">
                             {item.tag}
                           </div>
                         )}
-                      </div>       
+                      </div>
                       {/* Detail Teks */}
                       <div className="mt-4 mb-5 flex justify-between items-start gap-3 flex-1 px-1">
                         {/* Kiri: Nama & Studio */}
                         <div className="flex flex-col flex-1">
-                          <h4 
+                          <h4
                             onClick={() => openItemDetail(item)}
                             className="font-bold text-gray-800 text-[14px] leading-tight mb-1 hover:text-[#27BDE2] transition-colors pr-2 cursor-pointer"
                           >
                             {item.itemName}
                           </h4>
                           <span className="text-[10px] text-gray-400 font-medium tracking-wide uppercase">{item.studio}</span>
-                        </div>   
+                        </div>
                         {/* Kanan: Harga */}
                         <div className="flex flex-col items-end text-right shrink-0">
                           {item.oldPrice && (
@@ -562,15 +592,21 @@ const handleAddToCart = () => {
                         </div>
                       </div>
                       {/* Tombol Add to Cart */}
-                      <button onClick={(e) => { e.stopPropagation(); openItemDetail(item); }} className="w-full bg-[#27BDE2] hover:bg-[#1E9EBD] text-white font-bold py-3.5 px-4 rounded-[14px] text-[12px] transition-colors flex items-center justify-center gap-2 uppercase tracking-wider">
-                        <ShoppingCart size={16} />
-                        Add to cart
-                      </button>
+                      {item.is_redeemed ? (
+                        <button disabled className="w-full bg-gray-200 text-gray-400 font-bold py-3.5 px-4 rounded-[14px] text-[12px] cursor-not-allowed uppercase tracking-wider">
+                          Sold Out
+                        </button>
+                      ) : (
+                        <button onClick={(e) => { e.stopPropagation(); openItemDetail(item); }} className="w-full bg-[#27BDE2] hover:bg-[#1E9EBD] text-white font-bold py-3.5 px-4 rounded-[14px] text-[12px] transition-colors flex items-center justify-center gap-2 uppercase tracking-wider">
+                          <ShoppingCart size={16} />
+                          Add to cart
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
               </div>
-            )}  
+            )}
 
           </motion.div>
           {/* Card Bawah: Recent Activity */}
@@ -623,15 +659,15 @@ const handleAddToCart = () => {
           )}
 
           {/* Tombol Melayang (SEKARANG SELALU TAMPIL MESKI KOSONG) */}
-          <motion.button 
-            initial={{ scale: 0 }} 
+          <motion.button
+            initial={{ scale: 0 }}
             animate={isCartBouncing ? { scale: [1, 1.3, 0.9, 1.1, 1] } : { scale: 1 }}
             transition={{ duration: 0.4 }}
             onClick={() => setIsCartModalOpen(true)}
             className="fixed bottom-8 right-8 bg-[#27BDE2] hover:bg-[#1E9EBD] text-white p-4 rounded-full shadow-2xl flex items-center justify-center z-50 group transition-colors"
           >
             <ShoppingCart size={24} />
-            
+
             {/* Lencana Angka (Hanya muncul jika ada barang) */}
             {cart.length > 0 && (
               <span className="absolute -top-2 -right-2 bg-[#D43D9D] text-white text-[11px] font-bold w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm">
@@ -640,71 +676,66 @@ const handleAddToCart = () => {
             )}
           </motion.button>
 
-          
+
 
           {/* Popup Cart Modal */}
           {isCartModalOpen && (
-             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-               <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-gray-100 flex flex-col max-h-[85vh]">
-                 <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                   <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                     <ShoppingCart size={22} className="text-[#27BDE2]"/> Shopping Cart
-                   </h3>
-                   <button onClick={() => setIsCartModalOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1"><X size={24} /></button>
-                 </div>
-                 <div className="p-6 overflow-y-auto flex-1 bg-white">
-                   {cart.length === 0 ? (
-                     <div className="text-center py-10 text-gray-400 font-medium">Your cart is currently empty!</div>
-                   ) : (
-                     <div className="space-y-4">
-                       {cart.map((item: any) => (
-                         <div key={item.id} className="flex gap-4 items-center border border-gray-100 p-3 rounded-2xl bg-gray-50/50 relative group">
-                           <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center p-2 border border-gray-100 shadow-sm overflow-hidden">
-                             <img src={getRewardImage(item.img)} alt={item.itemName} className="w-full h-full object-contain" />
-                           </div>
-                           <div className="flex-1">
-                             <h4 className="text-sm font-bold text-gray-800 leading-tight mb-1 pr-6">{item.itemName}</h4>
-                             <div className="flex items-center gap-3">
-                               <p className="text-xs text-[#27BDE2] font-black">{item.price.toLocaleString()} PTS</p>
-                               <div className="flex items-center border border-gray-200 rounded-md bg-white">
-                                 <button onClick={() => handleDecreaseQuantity(item.id)} className="w-6 py-0.5 text-gray-500 hover:bg-gray-100 font-bold transition-colors text-xs rounded-l-md">-</button>
-                                 <span className="w-6 text-center text-xs font-bold text-gray-800 border-l border-r border-gray-200">{item.quantity}</span>
-                                 <button onClick={() => handleIncreaseQuantity(item.id)} className="w-6 py-0.5 text-gray-500 hover:bg-gray-100 font-bold transition-colors text-xs rounded-r-md">+</button>
-                               </div>
-                             </div>
-                           </div>
-                           <button onClick={() => handleRemoveFromCart(item.id)} className="text-gray-300 hover:text-red-500 absolute top-3 right-3 transition-colors bg-white rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100">
-                             <Trash2 size={16} />
-                           </button>
-                         </div>
-                       ))}
-                     </div>
-                   )}
-                 </div>
-                 {cart.length > 0 && (
-                   <div className="p-6 border-t border-gray-100 bg-gray-50">
-                     <div className="flex justify-between items-center mb-4">
-                       <span className="text-gray-500 font-medium text-sm">Total Cost:</span>
-                       <span className="text-2xl font-black text-gray-900">
-                         {cart.reduce((total: number, item: any) => total + (item.price * item.quantity), 0).toLocaleString()} <span className="text-lg text-gray-400">PTS</span>
-                       </span>
-                     </div>
-                     <button onClick={handleCheckoutCart} className="w-full bg-[#27BDE2] hover:bg-[#1E9EBD] text-white font-bold py-4 rounded-xl text-sm transition-all shadow-md transform hover:-translate-y-0.5 flex justify-center items-center gap-2">
-                       <Star size={18} className="fill-white"/> Confirm Redeem
-                     </button>
-                   </div>
-                 )}
-               </motion.div>
-             </div>
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+              <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-gray-100 flex flex-col max-h-[85vh]">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                  <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <ShoppingCart size={22} className="text-[#27BDE2]" /> Shopping Cart
+                  </h3>
+                  <button onClick={() => setIsCartModalOpen(false)} className="text-gray-400 hover:text-red-500 transition-colors p-1"><X size={24} /></button>
+                </div>
+                <div className="p-6 overflow-y-auto flex-1 bg-white">
+                  {cart.length === 0 ? (
+                    <div className="text-center py-10 text-gray-400 font-medium">Your cart is currently empty!</div>
+                  ) : (
+                    <div className="space-y-4">
+                      {cart.map((item: any) => (
+                        <div key={item.id} className="flex gap-4 items-center border border-gray-100 p-3 rounded-2xl bg-gray-50/50 relative group">
+                          <div className="w-16 h-16 bg-white rounded-xl flex items-center justify-center p-2 border border-gray-100 shadow-sm overflow-hidden">
+                            <img src={getRewardImage(item.img)} alt={item.itemName} className="w-full h-full object-contain" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-bold text-gray-800 leading-tight mb-1 pr-6">{item.itemName}</h4>
+                            <div className="flex items-center gap-3">
+                              <p className="text-xs text-[#27BDE2] font-black">{item.price.toLocaleString()} PTS</p>
+                            </div>
+                          </div>
+                          <button onClick={() => handleRemoveFromCart(item.id)} className="text-gray-300 hover:text-red-500 absolute top-3 right-3 transition-colors bg-white rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {cart.length > 0 && (
+                  <div className="p-6 border-t border-gray-100 bg-gray-50">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="text-gray-500 font-medium text-sm">Total Cost:</span>
+                      <span className="text-2xl font-black text-gray-900">
+                        {cart.reduce((total: number, item: any) => total + (item.price * item.quantity), 0).toLocaleString()} <span className="text-lg text-gray-400">PTS</span>
+                      </span>
+                    </div>
+                    <button onClick={handleCheckoutCart} className="w-full bg-[#27BDE2] hover:bg-[#1E9EBD] text-white font-bold py-4 rounded-xl text-sm transition-all shadow-md transform hover:-translate-y-0.5 flex justify-center items-center gap-2">
+                      <Star size={18} className="fill-white" /> Confirm Redeem
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            </div>
           )}
           {checkoutAlert.isOpen && (
             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[90] flex items-center justify-center p-4">
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-[24px] w-full max-w-md overflow-hidden shadow-2xl border border-gray-100 flex flex-col text-center p-6 sm:p-8 relative">
-                
+
                 {/* Ikon Sukses / Gagal */}
                 <div className="flex justify-center mb-4">
                   {checkoutAlert.isSuccess ? (
-                    <motion.div 
+                    <motion.div
                       initial={{ scale: 0, rotate: -180 }}
                       animate={{ scale: 1, rotate: 0 }}
                       transition={{ type: "spring", stiffness: 200, damping: 15 }}
@@ -730,7 +761,7 @@ const handleAddToCart = () => {
                 {checkoutAlert.isSuccess && checkoutAlert.items && checkoutAlert.items.length > 0 && (
                   <div className="mb-8 flex flex-wrap justify-center gap-3">
                     {checkoutAlert.items.map((item: any, idx: number) => (
-                      <motion.div 
+                      <motion.div
                         key={idx}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -742,7 +773,6 @@ const handleAddToCart = () => {
                           <img src={getRewardImage(item.img)} alt={item.itemName} className="w-full h-full object-contain relative z-10 drop-shadow-md" />
                         </div>
                         <span className="text-[10px] font-bold text-gray-700 leading-tight line-clamp-2 min-h-[28px]">{item.itemName}</span>
-                        <span className="text-[10px] text-gray-400 font-medium mt-1 bg-white px-2 py-0.5 rounded-full border border-gray-200">Qty: {item.quantity}</span>
                       </motion.div>
                     ))}
                   </div>
@@ -771,26 +801,26 @@ const handleAddToCart = () => {
                     <X size={24} />
                   </button>
                 </div>
-                
+
                 <form onSubmit={handleAddRewardSubmit} className="space-y-4 text-left">
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Studio / Brand</label>
-                    <input 
-                      type="text" 
-                      value={newReward.studio} 
-                      onChange={(e) => setNewReward({ ...newReward, studio: e.target.value })} 
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                    <input
+                      type="text"
+                      value={newReward.studio}
+                      onChange={(e) => setNewReward({ ...newReward, studio: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50"
                       placeholder="e.g. TOGE PRODUCTIONS"
                       required
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Item Name</label>
-                    <input 
-                      type="text" 
-                      value={newReward.item_name} 
-                      onChange={(e) => setNewReward({ ...newReward, item_name: e.target.value })} 
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                    <input
+                      type="text"
+                      value={newReward.item_name}
+                      onChange={(e) => setNewReward({ ...newReward, item_name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50"
                       placeholder="e.g. Coffee Talk Pin"
                       required
                     />
@@ -798,11 +828,11 @@ const handleAddToCart = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Price (PTS)</label>
-                      <input 
-                        type="number" 
-                        value={newReward.price} 
-                        onChange={(e) => setNewReward({ ...newReward, price: Number(e.target.value) })} 
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                      <input
+                        type="number"
+                        value={newReward.price}
+                        onChange={(e) => setNewReward({ ...newReward, price: Number(e.target.value) })}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50"
                         placeholder="1500"
                         min="1"
                         required
@@ -810,36 +840,36 @@ const handleAddToCart = () => {
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Old Price (PTS)</label>
-                      <input 
-                        type="number" 
-                        value={newReward.old_price} 
-                        onChange={(e) => setNewReward({ ...newReward, old_price: e.target.value })} 
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                      <input
+                        type="number"
+                        value={newReward.old_price}
+                        onChange={(e) => setNewReward({ ...newReward, old_price: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50"
                         placeholder="Optional"
                       />
                     </div>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Upload Image</label>
-                    <input 
-                      type="file" 
+                    <input
+                      type="file"
                       onChange={(e) => {
                         if (e.target.files && e.target.files.length > 0) {
                           setSelectedImageFile(e.target.files[0]);
                         }
-                      }} 
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                      }}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50"
                       accept="image/*"
                       required
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Tag / Promo</label>
-                    <input 
-                      type="text" 
-                      value={newReward.tag} 
-                      onChange={(e) => setNewReward({ ...newReward, tag: e.target.value })} 
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50" 
+                    <input
+                      type="text"
+                      value={newReward.tag}
+                      onChange={(e) => setNewReward({ ...newReward, tag: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:border-blue-500 bg-gray-50/50"
                       placeholder="e.g. New, Save 500 PTS, Merch"
                     />
                   </div>

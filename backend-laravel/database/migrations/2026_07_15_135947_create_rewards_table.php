@@ -19,6 +19,7 @@ return new class extends Migration
             $table->integer('old_price')->nullable();
             $table->string('img');
             $table->string('tag')->nullable();
+            $table->boolean('is_redeemed')->default(false);
             $table->timestamps();
         });
     }

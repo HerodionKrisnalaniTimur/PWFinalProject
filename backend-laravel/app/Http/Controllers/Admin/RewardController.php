@@ -34,11 +34,13 @@ class RewardController extends Controller
     {
         $request->validate([
             'studio' => 'required|string|max:255',
-            'item_name' => 'required|string|max:255',
+            'item_name' => 'required|string|max:255|unique:rewards,item_name',
             'price' => 'required|integer|min:0',
             'old_price' => 'nullable|integer|min:0',
             'img' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
             'tag' => 'nullable|string|max:50',
+        ], [
+            'item_name.unique' => 'Nama reward/produk ini sudah ada di Display, silakan gunakan nama lain.',
         ]);
 
         try {

@@ -15,6 +15,7 @@ class Reward extends Model
         'price',
         'old_price',
         'img',
-        'tag'
+        'tag',
+        'is_redeemed'
     ];
 }

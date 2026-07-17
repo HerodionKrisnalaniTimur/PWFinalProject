@@ -96,9 +96,11 @@ class ArticleController extends Controller
     {
         // 1. Validasi data
         $validator = Validator::make($request->all(), [
-            'title' => 'required|string|max:255',
+            'title' => 'required|string|max:255|unique:articles,title',
             'content' => 'required|string',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048', // max 2MB
+        ], [
+            'title.unique' => 'Judul artikel ini sudah ada, silakan gunakan judul lain.',
         ]);
 
         if ($validator->fails()) {
@@ -152,9 +154,11 @@ class ArticleController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'title' => 'sometimes|string|max:255',
+            'title' => 'sometimes|string|max:255|unique:articles,title,' . $id,
             'content' => 'sometimes|string',
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+        ], [
+            'title.unique' => 'Judul artikel ini sudah ada, silakan gunakan judul lain.',
         ]);
 
         if ($validator->fails()) {
