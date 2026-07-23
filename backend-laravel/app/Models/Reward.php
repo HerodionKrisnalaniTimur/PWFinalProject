@@ -18,4 +18,12 @@ class Reward extends Model
         'tag',
         'is_redeemed'
     ];
+
+    /**
+     * Get the redeem histories for the reward.
+     */
+    public function redeemHistories()
+    {
+        return $this->hasMany(RedeemHistory::class);
+    }
 }
