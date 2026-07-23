@@ -17,7 +17,7 @@ class RewardController extends Controller
         ]);
     }
 
-    public function redeem($id)
+    public function redeem(Request $request, $id)
     {
         $reward = Reward::find($id);
         if (!$reward) {
@@ -33,6 +33,30 @@ class RewardController extends Controller
                 'message' => 'Reward ini sudah habis terjual / sudah di-redeem.'
             ], 400);
         }
+
+        $walletAddress = $request->input('wallet_address');
+        if (!$walletAddress) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Wallet address diperlukan untuk melakukan redeem.'
+            ], 400);
+        }
+
+        $user = \App\Models\User::where('wallet_address', $walletAddress)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User dengan wallet address tersebut tidak ditemukan.'
+            ], 404);
+        }
+
+        // Catat ke tabel redeem_histories
+        \App\Models\RedeemHistory::create([
+            'user_id' => $user->id,
+            'reward_id' => $reward->id,
+            'points_spent' => $reward->price,
+            'status' => 'completed',
+        ]);
 
         $reward->is_redeemed = true;
         $reward->save();

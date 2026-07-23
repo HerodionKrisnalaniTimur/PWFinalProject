@@ -39,4 +39,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(PointActivity::class);
     }
+
+    /**
+     * Get the redeem histories that belong to the user.
+     */
+    public function redeemHistories()
+    {
+        return $this->hasMany(RedeemHistory::class);
+    }
+
+    /**
+     * Get the articles written by the user.
+     */
+    public function articles()
+    {
+        return $this->hasMany(Article::class);
+    }
 }

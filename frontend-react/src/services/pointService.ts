@@ -105,9 +105,11 @@ export const deleteReward = async (id: number, adminWallet: string) => {
   }
 };
 
-export const redeemReward = async (id: number) => {
+export const redeemReward = async (id: number, walletAddress: string) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/rewards/${id}/redeem`);
+    const response = await axios.post(`${API_BASE_URL}/rewards/${id}/redeem`, {
+      wallet_address: walletAddress
+    });
     return response.data;
   } catch (error) {
     console.error("Gagal me-redeem reward:", error);

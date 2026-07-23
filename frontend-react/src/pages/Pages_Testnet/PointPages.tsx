@@ -356,7 +356,7 @@ const PointsPage = () => {
     if (userPoints >= totalCost) {
       try {
         for (const item of cart) {
-          await redeemReward(item.id);
+          await redeemReward(item.id, walletAddress);
         }
 
         cart.forEach((item: any) => {
